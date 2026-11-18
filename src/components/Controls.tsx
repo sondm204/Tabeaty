@@ -10,7 +10,8 @@ export function RangeField({ label, value, min, max, unit, onChange }: {
   label: string; value: number; min: number; max: number; unit: string; onChange: (value: number) => void
 }) {
   return <label className="range-field">
-    <span>{label}<output>{value}{unit}</output></span>
-    <input type="range" value={value} min={min} max={max} onChange={(event) => onChange(event.target.valueAsNumber)} />
+    <span>{label}<span className="range-value" aria-hidden="true">{value}{unit}</span></span>
+    <input type="range" value={value} min={min} max={max} aria-valuetext={`${value}${unit}`}
+      onChange={(event) => onChange(event.target.valueAsNumber)} />
   </label>
 }

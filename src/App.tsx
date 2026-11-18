@@ -5,9 +5,11 @@ import { Note } from './components/Notes'
 import { exportBackup, Modal, SettingsPanel } from './components/Settings'
 import type { Confirmation, SettingsSection } from './components/Settings'
 import { Wallpaper, useWallpaper } from './components/Wallpaper'
-import { Clock, ShortcutDock, WeatherWidget } from './components/Widgets'
-import { createNote } from './model'
-import type { Size } from './model'
+import { DashboardWidgets, ShortcutDock } from './components/Widgets'
+import { createNote, noteRect } from './model'
+import type { Point, Size } from './model'
+import { snapNote } from './snap'
+import type { SnapGuides } from './snap'
 import { Board } from './services/board'
 import { SyncStorage, noteKey } from './services/storage'
 import type { Changes, StorageKey } from './services/storage'
@@ -26,6 +28,7 @@ export function App() {
   const [focus, setFocus] = useState('')
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [area, setArea] = useState<Size>({ width: 0, height: 0 })
+  const [guides, setGuides] = useState<SnapGuides>({})
   const canvas = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
@@ -76,6 +79,15 @@ export function App() {
     if (highest && highest.id !== id) board.updateNote(id, { zIndex: highest.zIndex + 1 })
   }, [board])
 
+  const findSnap = useCallback((id: string, point: Point, size: Size) => {
+    const neighbors = board.snapshot().notes.filter((note) => note.id !== id).map((note) => noteRect(note, area))
+    return snapNote(point, size, area, neighbors)
+  }, [area, board])
+
+  const showGuides = useCallback((next: SnapGuides) => {
+    setGuides((previous) => previous.x === next.x && previous.y === next.y ? previous : next)
+  }, [])
+
   const remove = useCallback((id: string) => {
     const note = board.snapshot().notes.find((item) => item.id === id)
     if (!note) return
@@ -116,12 +128,16 @@ export function App() {
       </div>
     </header>
 
-    <div className="widgets"><Clock /><WeatherWidget city={state.settings.city} editCity={editWeather} /></div>
+    <DashboardWidgets settings={state.settings} editCity={editWeather} />
 
     <div ref={canvas} className="canvas" role="region" aria-label="Bảng ghi chú">
       {area.width > 0 && area.height > 0 && state.notes.map((note, index) => <Note key={note.id} note={note} area={area} layer={index + 1}
         focus={focus === note.id} conflict={state.conflicts.includes(noteKey(note.id))} update={board.updateNote}
-        activate={activate} remove={remove} resolve={resolveNote} />)}
+        activate={activate} remove={remove} resolve={resolveNote} findSnap={findSnap} showGuides={showGuides} />)}
+      {(guides.x !== undefined || guides.y !== undefined) && <div className="snap-guides" aria-hidden="true">
+        {guides.x !== undefined && <div className="snap-guide snap-guide-x" style={{ left: guides.x }} />}
+        {guides.y !== undefined && <div className="snap-guide snap-guide-y" style={{ top: guides.y }} />}
+      </div>}
     </div>
 
     {(state.error || state.conflicts.length > 0 || failed) && <div className="notifications">

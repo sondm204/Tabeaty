@@ -1,9 +1,11 @@
 import { memo, useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import {
   Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Droplets,
   GitFork, Globe2, Mail, Plus, Search, Sun, SquarePlay,
 } from 'lucide-react'
-import type { City, Shortcut } from '../model'
+import { defaultClockAppearance, defaultWeatherAppearance } from '../model'
+import type { City, Settings, Shortcut, WidgetAppearance } from '../model'
 import { getWeather } from '../services/weather'
 import type { Weather } from '../services/weather'
 
@@ -11,6 +13,27 @@ const timeFormat = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '
 const dayFormat = new Intl.DateTimeFormat('vi-VN', { weekday: 'long' })
 const dateFormat = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const forecastDay = new Intl.DateTimeFormat('vi-VN', { weekday: 'short', timeZone: 'UTC' })
+
+function widgetStyle({ x, y, scale, color }: WidgetAppearance) {
+  return {
+    '--widget-x': `${x * 100}%`, '--widget-y': `${y * 100}%`,
+    '--widget-scale': scale / 100, '--widget-color': color,
+  } as CSSProperties
+}
+
+export const DashboardWidgets = memo(function DashboardWidgets({ settings, editCity }: { settings: Settings; editCity: () => void }) {
+  const clock = settings.clockAppearance ?? defaultClockAppearance
+  const weather = settings.weatherAppearance ?? defaultWeatherAppearance
+  const weatherStyle = {
+    ...widgetStyle(weather),
+    '--weather-background': weather.backgroundColor,
+    '--weather-opacity': `${weather.opacity}%`,
+  }
+  return <div className="widgets">
+    <div className="widget" style={widgetStyle(clock)}><Clock /></div>
+    <div className="widget" style={weatherStyle}><WeatherWidget city={settings.city} editCity={editCity} /></div>
+  </div>
+})
 
 export function Clock() {
   const [now, setNow] = useState(() => new Date())

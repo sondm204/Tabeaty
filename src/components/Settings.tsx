@@ -1,8 +1,11 @@
-import { ArrowDown, ArrowUp, Download, Globe2, Link2, MapPin, NotebookPen, Plus, Search, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Download, Globe2, LayoutGrid, Link2, MapPin, NotebookPen, Plus, Search, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { defaults, MAX_HEIGHT, MAX_SHORTCUTS, MAX_WIDTH, MIN_HEIGHT, MIN_WIDTH } from '../model'
-import type { City, Shortcut } from '../model'
+import {
+  defaultClockAppearance, defaultWeatherAppearance, defaults, MAX_HEIGHT, MAX_SHORTCUTS,
+  MAX_WIDGET_SCALE, MAX_WIDTH, MIN_HEIGHT, MIN_WIDGET_SCALE, MIN_WIDTH,
+} from '../model'
+import type { City, Shortcut, WidgetAppearance } from '../model'
 import { parseBackup, serializeBackup } from '../services/backup'
 import type { Backup } from '../services/backup'
 import type { Board } from '../services/board'
@@ -11,7 +14,7 @@ import { searchCities } from '../services/weather'
 import { IconButton, RangeField } from './Controls'
 
 const sections = [
-  ['appearance', 'Giao diện', SlidersHorizontal], ['notes', 'Ghi chú', NotebookPen],
+  ['appearance', 'Giao diện', SlidersHorizontal], ['widgets', 'Tiện ích', LayoutGrid], ['notes', 'Ghi chú', NotebookPen],
   ['weather', 'Thời tiết', MapPin], ['shortcuts', 'Lối tắt', Link2], ['general', 'Đồng bộ', Globe2],
 ] as const
 export type SettingsSection = (typeof sections)[number][0]
@@ -154,6 +157,28 @@ export function exportBackup(data: Backup) {
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
+function ColorField({ label, value, onChange }: {
+  label: string; value: string; onChange: (value: string) => void
+}) {
+  return <label className="toggle-field">{label}
+    <input type="color" value={value} onChange={(event) => onChange(event.target.value)} />
+  </label>
+}
+
+function WidgetFields({ appearance, update }: {
+  appearance: WidgetAppearance; update: (patch: Partial<WidgetAppearance>) => void
+}) {
+  return <>
+    <ColorField label="Màu chữ" value={appearance.color} onChange={(color) => update({ color })} />
+    <RangeField label="Kích thước" value={appearance.scale} min={MIN_WIDGET_SCALE} max={MAX_WIDGET_SCALE}
+      unit="%" onChange={(scale) => update({ scale })} />
+    <RangeField label="Vị trí ngang" value={Math.round(appearance.x * 100)} min={0} max={100}
+      unit="%" onChange={(value) => update({ x: value / 100 })} />
+    <RangeField label="Vị trí dọc" value={Math.round(appearance.y * 100)} min={0} max={100}
+      unit="%" onChange={(value) => update({ y: value / 100 })} />
+  </>
+}
+
 export function SettingsPanel({ section, close, select, board, state, confirm, showConflicts }: {
   section: SettingsSection | null
   close: () => void
@@ -167,6 +192,8 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
   const [fileError, setFileError] = useState('')
   const file = useRef<HTMLInputElement>(null)
   const update = board.updateSettings
+  const clock = settings.clockAppearance ?? defaultClockAppearance
+  const weather = settings.weatherAppearance ?? defaultWeatherAppearance
 
   async function readBackup(input: HTMLInputElement) {
     const selected = input.files?.[0]
@@ -201,7 +228,24 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
           <label className="toggle-field">Màu ghi chú mặc định<input type="color" value={settings.defaultColor} onChange={(event) => update({ defaultColor: event.target.value })} /></label>
           <RangeField label="Độ đậm nền ghi chú" value={settings.defaultOpacity} min={0} max={100} unit="%" onChange={(defaultOpacity) => update({ defaultOpacity })} />
         </div>}
+        {section === 'widgets' && <div className="section-stack">
+          <fieldset className="widget-settings">
+            <legend>Ngày giờ</legend>
+            <WidgetFields appearance={clock} update={(patch) => update({ clockAppearance: { ...clock, ...patch } })} />
+            <button type="button" className="secondary-button" onClick={() => update({ clockAppearance: defaultClockAppearance })}>Đặt lại ngày giờ</button>
+          </fieldset>
+          <fieldset className="widget-settings">
+            <legend>Thời tiết</legend>
+            <WidgetFields appearance={weather} update={(patch) => update({ weatherAppearance: { ...weather, ...patch } })} />
+            <ColorField label="Màu nền" value={weather.backgroundColor}
+              onChange={(backgroundColor) => update({ weatherAppearance: { ...weather, backgroundColor } })} />
+            <RangeField label="Độ đậm nền" value={weather.opacity} min={0} max={100} unit="%"
+              onChange={(opacity) => update({ weatherAppearance: { ...weather, opacity } })} />
+            <button type="button" className="secondary-button" onClick={() => update({ weatherAppearance: defaultWeatherAppearance })}>Đặt lại giao diện thời tiết</button>
+          </fieldset>
+        </div>}
         {section === 'notes' && <div className="section-stack">
+          <p className="form-hint">Giữ Shift khi kéo ghi chú để căn theo đường dóng ở cạnh và tâm.</p>
           <RangeField label="Chiều rộng mặc định" value={settings.width} min={MIN_WIDTH} max={MAX_WIDTH} unit=" px" onChange={(width) => update({ width })} />
           <RangeField label="Chiều cao mặc định" value={settings.height} min={MIN_HEIGHT} max={MAX_HEIGHT} unit=" px" onChange={(height) => update({ height })} />
           <RangeField label="Cỡ chữ mặc định" value={settings.fontSize} min={12} max={28} unit=" px" onChange={(fontSize) => update({ fontSize })} />

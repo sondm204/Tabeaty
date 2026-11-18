@@ -2,6 +2,8 @@
 
 NoteScape thay trang Tab mới của Chromium bằng bảng ghi chú nổi, đồng hồ tiếng Việt, thời tiết và lối tắt. Giao diện và ghi chú đã lưu mở được khi ngoại tuyến. Ảnh nền được tải từ Picsum và đổi sau khoảng 5 phút hoặc khi bấm **Đổi hình nền**. Bạn có thể kéo ghi chú bằng thanh tiêu đề, đổi kích thước ở cạnh hoặc góc và chỉnh màu, độ đậm nền, cỡ chữ qua biểu tượng bảng màu.
 
+Trong **Cài đặt → Tiện ích**, bạn có thể đổi màu chữ, kích thước và vị trí ngang/dọc của ngày giờ và thời tiết. Thẻ thời tiết còn có màu và độ đậm nền riêng. Khi sắp xếp ghi chú, giữ **Shift** trong lúc kéo để căn theo cạnh hoặc tâm của ghi chú khác và vùng làm việc. Thả chuột khi đường dóng hiện để lưu vị trí đã căn.
+
 ## Cài đặt và phát triển
 
 Cần Node.js 22.12+ (nhánh 22) hoặc Node.js 24+, npm và Chrome hoặc Edge bản hiện hành. Dự án dùng WXT, React, TypeScript, Tailwind CSS, react-rnd, Lucide React và Vitest.
@@ -59,11 +61,13 @@ Extension chỉ khai báo quyền `storage` và quyền truy cập hai máy ch�
 
 - [ ] Cài unpacked, mở tab mới và kiểm tra đồng hồ, thứ và ngày.
 - [ ] Tạo nhiều ghi chú. Viết nhiều dòng, chọn và dán văn bản. Kéo bằng tay nắm, kéo cạnh/góc để đổi kích thước và kiểm tra note lên lớp trên khi chọn.
+- [ ] Giữ Shift khi kéo gần cạnh hoặc tâm của ghi chú khác. Kiểm tra đường dóng và vị trí sau khi thả, rồi thử nhả Shift giữa chừng để kéo tự do.
 - [ ] Đổi màu nền, màu chữ, độ đậm và cỡ chữ. Khóa vị trí rồi kiểm tra nội dung vẫn chỉnh được. Thử hủy và xác nhận xóa.
 - [ ] Tải lại tab và khởi động lại trình duyệt sau khi báo đã lưu. Đối chiếu nội dung, kích thước và cài đặt.
 - [ ] Thử ở 1366×768, 1440×900, 1920×1080 và thu nhỏ cửa sổ. Kiểm tra các nút trên ghi chú còn truy cập được.
 - [ ] Đổi ảnh bằng tay, đợi khoảng 5 phút rồi thử đưa tab xuống nền và quay lại sau khi quá hạn. Thử khi mất mạng để kiểm tra ảnh hiện tại hoặc nền chuyển sắc.
 - [ ] Đổi thành phố, kiểm tra nhiệt độ, độ ẩm và ba ngày dự báo. Thử tên thành phố không tồn tại.
+- [ ] Trong **Cài đặt → Tiện ích**, đổi màu, kích thước và vị trí của ngày giờ và thời tiết. Tải lại tab để kiểm tra cài đặt đã lưu rồi thử đặt lại cả hai.
 - [ ] Thêm, sửa, đổi thứ tự, xóa và bấm mở lối tắt. Thử URL có giao thức không được hỗ trợ.
 - [ ] Xuất và nhập JSON, sau đó thử nhập tệp sai định dạng.
 - [ ] Mở hai tab, chỉnh cùng ghi chú để kiểm tra cập nhật và xung đột. Xóa ở một tab rồi đối chiếu tab kia.

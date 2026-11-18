@@ -1,5 +1,5 @@
-import { MAX_HEIGHT, MAX_SHORTCUTS, MAX_WIDTH, MIN_HEIGHT, MIN_WIDTH } from '../model'
-import type { City, Settings, Shortcut, StickyNote } from '../model'
+import { MAX_HEIGHT, MAX_SHORTCUTS, MAX_WIDGET_SCALE, MAX_WIDTH, MIN_HEIGHT, MIN_WIDGET_SCALE, MIN_WIDTH } from '../model'
+import type { City, Settings, Shortcut, StickyNote, WeatherAppearance, WidgetAppearance } from '../model'
 
 export const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -41,11 +41,23 @@ export function isCity(value: unknown): value is City {
     && inRange(value.latitude, -90, 90) && inRange(value.longitude, -180, 180)
 }
 
+function isWidgetAppearance(value: unknown): value is WidgetAppearance {
+  return record(value) && inRange(value.x, 0, 1) && inRange(value.y, 0, 1)
+    && color(value.color) && inRange(value.scale, MIN_WIDGET_SCALE, MAX_WIDGET_SCALE)
+}
+
+function isWeatherAppearance(value: unknown): value is WeatherAppearance {
+  return record(value) && isWidgetAppearance(value)
+    && color(value.backgroundColor) && inRange(value.opacity, 0, 100)
+}
+
 export function isSettings(value: unknown): value is Settings {
   return record(value) && inRange(value.overlay, 0, 75) && inRange(value.blur, 0, 16)
     && typeof value.animate === 'boolean' && color(value.defaultColor)
     && inRange(value.defaultOpacity, 0, 100) && inRange(value.width, MIN_WIDTH, MAX_WIDTH)
     && inRange(value.height, MIN_HEIGHT, MAX_HEIGHT) && inRange(value.fontSize, 12, 28) && isCity(value.city)
+    && (value.clockAppearance === undefined || isWidgetAppearance(value.clockAppearance))
+    && (value.weatherAppearance === undefined || isWeatherAppearance(value.weatherAppearance))
 }
 
 export function isShortcuts(value: unknown): value is Shortcut[] {

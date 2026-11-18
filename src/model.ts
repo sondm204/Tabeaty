@@ -1,6 +1,7 @@
 export interface Point { x: number; y: number }
 export interface Size { width: number; height: number }
-export interface StickyNote extends Point, Size {
+export interface Rect extends Point, Size {}
+export interface StickyNote extends Rect {
   id: string
   title: string
   content: string
@@ -20,6 +21,16 @@ export interface City {
   longitude: number
 }
 
+export interface WidgetAppearance extends Point {
+  color: string
+  scale: number
+}
+
+export interface WeatherAppearance extends WidgetAppearance {
+  backgroundColor: string
+  opacity: number
+}
+
 export interface Settings {
   overlay: number
   blur: number
@@ -30,6 +41,8 @@ export interface Settings {
   height: number
   fontSize: number
   city: City
+  clockAppearance?: WidgetAppearance
+  weatherAppearance?: WeatherAppearance
 }
 
 export interface Shortcut { id: string; label: string; url: string }
@@ -39,12 +52,20 @@ export const MIN_HEIGHT = 150
 export const MAX_WIDTH = 760
 export const MAX_HEIGHT = 600
 export const MAX_SHORTCUTS = 24
+export const MIN_WIDGET_SCALE = 60
+export const MAX_WIDGET_SCALE = 150
 export const colors = ['#f6efa9', '#f8d8dd', '#d4e6f6', '#d9edd4', '#e4ddf6', '#f8f5eb', '#303435'] as const
+
+export const defaultClockAppearance: WidgetAppearance = { x: 0, y: 0, color: '#faf9f1', scale: 100 }
+export const defaultWeatherAppearance: WeatherAppearance = {
+  x: 1, y: 0, color: '#f8f8f0', scale: 100, backgroundColor: '#1a2620', opacity: 61,
+}
 
 export const defaults: Settings = {
   overlay: 24, blur: 0, animate: true, defaultColor: colors[0], defaultOpacity: 96,
   width: 300, height: 240, fontSize: 15,
   city: { name: 'Hà Nội', country: 'Việt Nam', latitude: 21.0285, longitude: 105.8542 },
+  clockAppearance: defaultClockAppearance, weatherAppearance: defaultWeatherAppearance,
 }
 
 export const defaultShortcuts: Shortcut[] = [

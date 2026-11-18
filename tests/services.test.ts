@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createNote, defaults, defaultShortcuts } from '../src/model'
 import { parseBackup, serializeBackup } from '../src/services/backup'
 import { itemBytes } from '../src/services/storage'
-import { normalizeUrl } from '../src/services/validation'
+import { isSettings, normalizeUrl } from '../src/services/validation'
 import { createRotation, ROTATION_INTERVAL } from '../src/services/wallpaper'
 import { getWeather, normalizeWeather, searchCities } from '../src/services/weather'
 
@@ -32,6 +32,19 @@ describe('Sao lưu', () => {
     expect(itemBytes('x', 'ế🌱')).toBe(10)
     expect(itemBytes('x', 'ế🌱')).toBeGreaterThan('x"ế🌱"'.length)
   })
+  it('đọc bản sao lưu cũ và kiểm tra giao diện tiện ích mới', () => {
+    const { clockAppearance, weatherAppearance, ...legacySettings } = defaults
+    expect(parseBackup(serializeBackup({ ...backup, settings: legacySettings })).settings).toEqual(legacySettings)
+    const settings = {
+      ...defaults,
+      clockAppearance: { ...clockAppearance!, x: .25, y: .75, color: '#ff0000', scale: 120 },
+      weatherAppearance: { ...weatherAppearance!, opacity: 15 },
+    }
+    expect(parseBackup(serializeBackup({ ...backup, settings })).settings).toEqual(settings)
+    expect(isSettings({ ...settings, clockAppearance: { ...settings.clockAppearance, x: 1.1 } })).toBe(false)
+    expect(isSettings({ ...settings, weatherAppearance: { ...settings.weatherAppearance, opacity: -1 } })).toBe(false)
+  })
+
   it('từ chối bản sao lưu hỏng, mục trùng, lưu ngoài viewport hoặc URL không an toàn', () => {
     expect(() => parseBackup('{')).toThrow(SyntaxError)
     expect(() => parseBackup(serializeBackup({ ...backup, notes: [note, note] }))).toThrow('trùng')
