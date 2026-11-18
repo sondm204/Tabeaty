@@ -96,6 +96,7 @@ export function isSettings(value: unknown): value is Settings {
     && inRange(value.defaultOpacity, 0, 100) && inRange(value.width, MIN_WIDTH, MAX_WIDTH)
     && inRange(value.height, MIN_HEIGHT, MAX_HEIGHT) && inRange(value.fontSize, 12, 28) && isCity(value.city)
     && (value.clockAppearance === undefined || isWidgetAppearance(value.clockAppearance))
+    && (value.clockDisplay === undefined || value.clockDisplay === 'date-time' || value.clockDisplay === 'time' || value.clockDisplay === 'date')
     && (value.weatherAppearance === undefined || isWeatherAppearance(value.weatherAppearance))
     && (value.showTimers === undefined || typeof value.showTimers === 'boolean')
     && (value.widgetVisibility === undefined || isWidgetVisibility(value.widgetVisibility))

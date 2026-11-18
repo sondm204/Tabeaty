@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Grid2X2, LoaderCircle, Image, Move, NotebookPen, Plus, Settings2 } from 'lucide-react'
+import { AlertCircle, LoaderCircle, Image, Move, NotebookPen, Plus, Settings2 } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { IconButton } from './components/Controls'
 import { Note } from './components/Notes'
@@ -12,7 +12,6 @@ import { createNote, noteRect, widgetVisible } from './model'
 import type { Rect, Size } from './model'
 import { snapNote, snapResize } from './snap'
 import type { ResizeDirection, SnapGuides } from './snap'
-import { arrangeNotes } from './note-grid'
 import { Board } from './services/board'
 import { SyncStorage, noteKey } from './services/storage'
 import type { Changes, StorageKey } from './services/storage'
@@ -72,7 +71,6 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
   const [area, setArea] = useState<Size>({ width: 0, height: 0 })
   const [guides, setGuides] = useState<SnapGuides>({})
   const [editingWidgets, setEditingWidgets] = useState(false)
-  const [layoutMessage, setLayoutMessage] = useState('')
   const canvas = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
@@ -106,16 +104,6 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
     window.addEventListener('keydown', escape)
     return () => window.removeEventListener('keydown', escape)
   }, [editingWidgets])
-
-  function arrange() {
-    const positions = arrangeNotes(board.snapshot().notes, area)
-    if (!positions) {
-      setLayoutMessage('Vùng làm việc chưa đủ chỗ để xếp tất cả ghi chú.')
-      return
-    }
-    const moved = board.moveNotes(positions)
-    setLayoutMessage(moved ? `Đã xếp ${moved} ghi chú theo lưới.` : 'Ghi chú đã ở đúng vị trí lưới.')
-  }
 
   function addNote() {
     const { notes, settings } = board.snapshot()
@@ -196,16 +184,13 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
         <button type="button" className="wallpaper-action glass" disabled={loading} onClick={refresh} aria-label="Đổi hình nền" title="Đổi hình nền">
           {loading ? <LoaderCircle size={17} className="spinner" /> : <Image size={17} />} <span>Đổi hình nền</span>
         </button>
-        <IconButton className="settings-action glass" label="Xếp ghi chú theo lưới"
-          disabled={!state.ready || !area.width || !area.height || !state.notes.some((note) => !note.locked)}
-          onClick={arrange}><Grid2X2 size={17} /></IconButton>
         <IconButton className="settings-action glass" label="Chỉnh bố cục tiện ích" aria-pressed={editingWidgets}
           disabled={!state.ready} onClick={() => setEditingWidgets(!editingWidgets)}><Move size={17} /></IconButton>
         <IconButton className="settings-action glass" label="Cài đặt" disabled={!state.ready} onClick={() => setSection('appearance')}><Settings2 size={18} /></IconButton>
       </div>
     </header>
 
-    <DashboardWidgets settings={state.settings} editCity={editWeather} editing={editingWidgets} update={board.updateSettings}
+    <DashboardWidgets settings={state.settings} ready={state.ready} editCity={editWeather} editing={editingWidgets} update={board.updateSettings}
       setVisibility={board.setWidgetVisibility} />
 
     <div ref={canvas} className="canvas" role="region" aria-label="Bảng ghi chú">
@@ -222,12 +207,7 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
       <TimerWidgets settings={state.settings} update={board.updateSettings} configure={editTimers} editing={editingWidgets}
         setVisibility={board.setWidgetVisibility} />}
 
-    {(state.error || state.conflicts.length > 0 || failed || layoutMessage) && <div className="notifications">
-      {layoutMessage && <div className="notice glass" role="status">
-        <Grid2X2 size={17} /><div>{layoutMessage}<div className="notice-actions">
-          <button type="button" onClick={() => setLayoutMessage('')}>Đóng</button>
-        </div></div>
-      </div>}
+    {(state.error || state.conflicts.length > 0 || failed) && <div className="notifications">
       {state.error && <div className="notice glass" role="alert">
         <AlertCircle size={17} /><div>{state.error}<div className="notice-actions">
           <button type="button" onClick={() => { void (state.ready ? board.flush() : board.load()) }}>Thử lại</button>
@@ -241,12 +221,6 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
     </div>}
 
     <footer className="bottom-bar">
-      <div className="board-info">
-        <div><NotebookPen size={15} /> {state.notes.length} ghi chú</div>
-        <div className="save-status" role="status">{state.ready && !state.pending && !state.error && <Check size={12} />}
-          {state.error ? 'Cần kiểm tra lưu trữ' : !state.ready ? 'Đang mở ghi chú…' : state.conflicts.length ? 'Có xung đột' : state.pending ? 'Chờ lưu' : 'Đã lưu trên trình duyệt'}
-        </div>
-      </div>
       <ShortcutDock shortcuts={state.shortcuts} edit={editShortcuts} />
       <button type="button" className="add-note" disabled={!state.ready} onClick={addNote}><Plus size={20} /><span>Ghi chú mới</span></button>
     </footer>

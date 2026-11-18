@@ -1,11 +1,11 @@
 import { ArrowDown, ArrowUp, ChevronDown, Download, Globe2, LayoutGrid, MapPin, Move, Plus, Search, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode, Ref } from 'react'
 import {
   defaultClockAppearance, defaultWeatherAppearance, defaults, MAX_HEIGHT, MAX_SHORTCUTS,
   MAX_WIDTH, MIN_HEIGHT, MIN_WIDTH, widgetVisible,
 } from '../model'
-import type { City, Shortcut, WidgetId } from '../model'
+import type { City, ClockDisplay, Shortcut, WidgetId } from '../model'
 import { parseBackup, serializeBackup } from '../services/backup'
 import type { Backup } from '../services/backup'
 import type { Board } from '../services/board'
@@ -25,15 +25,31 @@ export function Modal({ open, close, children, label, className }: {
   open: boolean; close: () => void; children: ReactNode; label: string; className: string
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
-  useEffect(() => {
+  const lastChildren = useRef<ReactNode>(null)
+  const [retainExit, setRetainExit] = useState(false)
+  useLayoutEffect(() => {
+    if (open) lastChildren.current = children
+  }, [open, children])
+  useLayoutEffect(() => {
     const node = dialog.current
-    if (open && !node?.open) node?.showModal()
-    else if (!open && node?.open) node.close()
+    if (!node) return
+    if (open) {
+      if (!node.open) node.showModal()
+      setRetainExit(true)
+    } else if (node.open) node.close()
   }, [open])
+  useEffect(() => {
+    if (open || !retainExit) return
+    const release = setTimeout(() => {
+      lastChildren.current = null
+      setRetainExit(false)
+    }, 220)
+    return () => clearTimeout(release)
+  }, [open, retainExit])
   return <dialog ref={dialog} className={className} aria-label={label}
     onCancel={(event) => { event.preventDefault(); close() }}
     onClick={(event) => { if (event.target === event.currentTarget) close() }}>
-    {open && children}
+    {open ? children : retainExit ? lastChildren.current : null}
   </dialog>
 }
 
@@ -166,11 +182,22 @@ function ColorField({ label, value, onChange }: {
   </label>
 }
 
-function WidgetGroup({ title, target, children }: { title: string; target?: Ref<HTMLDetailsElement>; children: ReactNode }) {
-  return <details className="widget-settings" ref={target}>
-    <summary>{title}<ChevronDown aria-hidden="true" size={16} /></summary>
-    <div className="widget-settings-content">{children}</div>
-  </details>
+function WidgetGroup({ title, target, toggle, children }: {
+  title: string; target?: Ref<HTMLElement>; toggle?: ReactNode; children: ReactNode
+}) {
+  const [expanded, setExpanded] = useState(!!target)
+  const contentId = useId()
+  useLayoutEffect(() => { if (target) setExpanded(true) }, [target])
+  return <section className="widget-settings" data-expanded={expanded} ref={target}>
+    <div className="widget-settings-header">
+      <button type="button" className="widget-settings-toggle" aria-expanded={expanded} aria-controls={contentId}
+        onClick={() => setExpanded((previous) => !previous)}>{title}<ChevronDown aria-hidden="true" size={16} /></button>
+      {toggle}
+    </div>
+    <div id={contentId} className="widget-settings-collapse" inert={!expanded} aria-hidden={!expanded}>
+      <div className="widget-settings-clip"><div className="widget-settings-content">{children}</div></div>
+    </div>
+  </section>
 }
 
 export function SettingsPanel({ section, close, select, board, state, confirm, showConflicts, editWidgetLayout, widgetTarget }: {
@@ -187,22 +214,17 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
   const { settings, shortcuts, notes } = state
   const [fileError, setFileError] = useState('')
   const file = useRef<HTMLInputElement>(null)
-  const target = useRef<HTMLDetailsElement>(null)
+  const target = useRef<HTMLElement>(null)
   const update = board.updateSettings
   const clock = settings.clockAppearance ?? defaultClockAppearance
   const weather = settings.weatherAppearance ?? defaultWeatherAppearance
   useEffect(() => {
-    const details = target.current
-    if (section !== 'widgets' || !widgetTarget || !details) return
-    details.open = true
-    details.scrollIntoView({ block: 'start' })
+    if (section === 'widgets' && widgetTarget) target.current?.scrollIntoView({ block: 'start' })
   }, [section, widgetTarget])
 
   function visibility(widget: WidgetId, label: string) {
-    return <label className="toggle-field widget-visibility">Hiện {label}
-      <input type="checkbox" checked={widgetVisible(settings, widget)}
-        onChange={(event) => board.setWidgetVisibility(widget, event.target.checked)} />
-    </label>
+    return <input className="widget-visibility" type="checkbox" aria-label={`Hiện ${label}`} title={`Hiện ${label}`}
+      checked={widgetVisible(settings, widget)} onChange={(event) => board.setWidgetVisibility(widget, event.target.checked)} />
   }
 
   async function readBackup(input: HTMLInputElement) {
@@ -238,12 +260,17 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
         </div>}
         {section === 'widgets' && <div className="section-stack">
           <button className="secondary-button" type="button" onClick={editWidgetLayout}><Move size={16} /> Kéo thả tiện ích trên bảng</button>
-          <WidgetGroup title="Ngày giờ">
-            {visibility('clock', 'ngày giờ')}
+          <WidgetGroup title="Ngày giờ" toggle={visibility('clock', 'ngày giờ')}>
+            <label className="toggle-field">Hiển thị ngày giờ
+              <select value={settings.clockDisplay ?? 'date-time'} onChange={(event) => update({ clockDisplay: event.target.value as ClockDisplay })}>
+                <option value="date-time">Ngày và giờ</option>
+                <option value="time">Chỉ giờ</option>
+                <option value="date">Chỉ ngày</option>
+              </select>
+            </label>
             <ColorField label="Màu chữ" value={clock.color} onChange={(color) => update({ clockAppearance: { ...clock, color } })} />
           </WidgetGroup>
-          <WidgetGroup title="Thời tiết" target={widgetTarget === 'weather' ? target : undefined}>
-            {visibility('weather', 'thời tiết')}
+          <WidgetGroup title="Thời tiết" target={widgetTarget === 'weather' ? target : undefined} toggle={visibility('weather', 'thời tiết')}>
             <CityForm city={settings.city} select={(city) => update({ city })} />
             <ColorField label="Màu chữ" value={weather.color} onChange={(color) => update({ weatherAppearance: { ...weather, color } })} />
             <ColorField label="Màu nền" value={weather.backgroundColor}
@@ -251,12 +278,10 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
             <RangeField label="Độ đậm nền" value={weather.opacity} min={0} max={100} unit="%"
               onChange={(opacity) => update({ weatherAppearance: { ...weather, opacity } })} />
           </WidgetGroup>
-          <WidgetGroup title="Countdown" target={widgetTarget === 'countdown' ? target : undefined}>
-            {visibility('countdown', 'Countdown')}
+          <WidgetGroup title="Countdown" target={widgetTarget === 'countdown' ? target : undefined} toggle={visibility('countdown', 'Countdown')}>
             <CountdownSettings settings={settings} update={update} startAdding={widgetTarget === 'countdown'} />
           </WidgetGroup>
-          <WidgetGroup title="Pomodoro">
-            {visibility('pomodoro', 'Pomodoro')}
+          <WidgetGroup title="Pomodoro" toggle={visibility('pomodoro', 'Pomodoro')}>
             <PomodoroSettings settings={settings} update={update} />
           </WidgetGroup>
           <WidgetGroup title="Ghi chú">
@@ -279,7 +304,7 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
         </div>}
         {section === 'general' && <div className="section-stack">
           <p className="form-hint">Cài NoteScape trên cả hai máy, dùng cùng hệ trình duyệt và cùng tài khoản, rồi bật đồng bộ dữ liệu tiện ích. Chrome và Edge có hệ đồng bộ riêng.</p>
-          <p className="form-hint">Trạng thái lưu chỉ phản ánh dữ liệu trên trình duyệt hiện tại. Trình duyệt sẽ chuyển thay đổi đến các thiết bị theo lịch đồng bộ của nó.</p>
+          <p className="form-hint">Trình duyệt sẽ chuyển thay đổi đến các thiết bị theo lịch đồng bộ của nó.</p>
           {state.conflicts.length > 0 && <button type="button" className="secondary-button" onClick={showConflicts}>Xem thay đổi cần xử lý</button>}
           <button type="button" className="secondary-button" onClick={() => confirm({
             title: 'Khôi phục cài đặt?',

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createNote, defaults, noteRect, widgetVisible } from '../src/model'
-import { arrangeNotes } from '../src/note-grid'
+import { createNote, defaults, widgetVisible } from '../src/model'
 import { parseRichText, richTextFromPlain, serializeRichText } from '../src/rich-text'
 import { parseBackup, serializeBackup } from '../src/services/backup'
 import { isSettings } from '../src/services/validation'
@@ -8,23 +7,6 @@ import { countdownEvents, defaultPomodoro, pomodoroRemaining, saveCountdown, tim
 
 const note = (id: string, createdAt: number) => ({
   ...createNote({ ...defaults, width: 200, height: 150 }, { x: 0, y: 0 }, 1), id, createdAt,
-})
-
-describe('Xếp ghi chú theo lưới', () => {
-  it('giữ chỗ của ghi chú khóa và xếp các ghi chú còn lại theo thứ tự tạo', () => {
-    const area = { width: 500, height: 400 }
-    const first = note('first', 1)
-    const second = note('second', 2)
-    const locked = { ...note('locked', 3), locked: true }
-    const layout = arrangeNotes([second, locked, first], area)
-    expect(layout?.has('locked')).toBe(false)
-    expect(noteRect({ ...first, ...layout?.get('first') }, area)).toMatchObject({ x: 224, y: 0 })
-    expect(noteRect({ ...second, ...layout?.get('second') }, area)).toMatchObject({ x: 0, y: 176 })
-  })
-
-  it('không tạo phương án xếp chồng lên nhau nếu vùng làm việc quá nhỏ', () => {
-    expect(arrangeNotes([note('left', 1), note('right', 2)], { width: 390, height: 150 })).toBeUndefined()
-  })
 })
 
 describe('Ghi chú định dạng', () => {
@@ -119,4 +101,14 @@ it('đọc công tắc hẹn giờ cũ và ưu tiên trạng thái riêng của 
   expect(widgetVisible(settings, 'clock')).toBe(true)
   expect(widgetVisible(defaults, 'countdown')).toBe(false)
   expect(isSettings({ ...settings, widgetVisibility: { clock: 'false' } })).toBe(false)
+})
+
+it('lưu từng chế độ ngày giờ và vẫn đọc cấu hình trước khi có chế độ', () => {
+  const { clockDisplay, ...legacy } = defaults
+  expect(isSettings(legacy)).toBe(true)
+  for (const mode of ['date-time', 'time', 'date'] as const) {
+    const settings = { ...legacy, clockDisplay: mode }
+    expect(parseBackup(serializeBackup({ settings, notes: [], shortcuts: [] })).settings.clockDisplay).toBe(mode)
+  }
+  expect(isSettings({ ...legacy, clockDisplay: 'unknown' })).toBe(false)
 })

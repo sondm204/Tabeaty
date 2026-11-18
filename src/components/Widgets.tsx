@@ -5,9 +5,9 @@ import {
   GitFork, Globe2, Mail, Plus, Search, Sun, SquarePlay,
 } from 'lucide-react'
 import { defaultClockAppearance, defaultWeatherAppearance, widgetVisible } from '../model'
-import type { City, Settings, Shortcut, WidgetId } from '../model'
-import { getWeather } from '../services/weather'
+import type { City, ClockDisplay, Settings, Shortcut, WidgetId } from '../model'
 import type { Weather } from '../services/weather'
+import { useWeather } from '../use-weather'
 import { EditableWidget } from './EditableWidget'
 
 const timeFormat = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
@@ -15,12 +15,14 @@ const dayFormat = new Intl.DateTimeFormat('vi-VN', { weekday: 'long' })
 const dateFormat = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const forecastDay = new Intl.DateTimeFormat('vi-VN', { weekday: 'short', timeZone: 'UTC' })
 
-export const DashboardWidgets = memo(function DashboardWidgets({ settings, editCity, editing, update, setVisibility }: {
-  settings: Settings; editCity: () => void; editing: boolean; update: (patch: Partial<Settings>) => void
+export const DashboardWidgets = memo(function DashboardWidgets({ settings, ready, editCity, editing, update, setVisibility }: {
+  settings: Settings; ready: boolean; editCity: () => void; editing: boolean; update: (patch: Partial<Settings>) => void
   setVisibility: (widget: WidgetId, visible: boolean) => void
 }) {
   const clock = settings.clockAppearance ?? defaultClockAppearance
   const weather = settings.weatherAppearance ?? defaultWeatherAppearance
+  const showWeather = ready && widgetVisible(settings, 'weather')
+  const forecast = useWeather(settings.city, showWeather)
   const weatherStyle = {
     '--weather-background': weather.backgroundColor,
     '--weather-opacity': `${weather.opacity}%`,
@@ -28,16 +30,16 @@ export const DashboardWidgets = memo(function DashboardWidgets({ settings, editC
   return <div className={`widgets${editing ? ' widgets-editing' : ''}`}>
     {widgetVisible(settings, 'clock') && <EditableWidget label="ngày giờ" appearance={clock} editing={editing}
       hide={() => setVisibility('clock', false)}
-      update={(patch) => update({ clockAppearance: { ...clock, ...patch } })}><Clock /></EditableWidget>}
-    {widgetVisible(settings, 'weather') && <EditableWidget label="thời tiết" appearance={weather} editing={editing} style={weatherStyle}
+      update={(patch) => update({ clockAppearance: { ...clock, ...patch } })}><Clock display={settings.clockDisplay ?? 'date-time'} /></EditableWidget>}
+    {showWeather && <EditableWidget label="thời tiết" appearance={weather} editing={editing} style={weatherStyle}
       hide={() => setVisibility('weather', false)}
       update={(patch) => update({ weatherAppearance: { ...weather, ...patch } })}>
-      <WeatherWidget city={settings.city} editCity={editCity} />
+      <WeatherWidget city={settings.city} editCity={editCity} {...forecast} />
     </EditableWidget>}
   </div>
 })
 
-export function Clock() {
+function Clock({ display }: { display: ClockDisplay }) {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
@@ -55,9 +57,9 @@ export function Clock() {
     }
   }, [])
 
-  return <section className="clock" aria-label="Giờ địa phương">
-    <p className="clock-date"><span>{dayFormat.format(now)}</span><span className="date-dot" />{dateFormat.format(now)}</p>
-    <time dateTime={now.toISOString()}>{timeFormat.format(now)}</time>
+  return <section className={`clock clock--${display}`} aria-label="Ngày giờ địa phương">
+    {display !== 'time' && <p className="clock-date"><span>{dayFormat.format(now)}</span><span className="date-dot" />{dateFormat.format(now)}</p>}
+    {display !== 'date' && <time dateTime={now.toISOString()}>{timeFormat.format(now)}</time>}
   </section>
 }
 
@@ -75,55 +77,10 @@ function condition(code: number) {
   return { Icon: Cloud, label: 'Chưa rõ' }
 }
 
-const WEATHER_INTERVAL = 30 * 60 * 1000
-
-export const WeatherWidget = memo(function WeatherWidget({ city, editCity }: { city: City; editCity: () => void }) {
-  const [data, setData] = useState<{ location: string; weather?: Weather; failed: boolean }>()
-  const { latitude, longitude } = city
-  const location = `${latitude},${longitude}`
-  const shown = data?.location === location ? data : undefined
-
-  useEffect(() => {
-    let deadline = 0
-    let active: AbortController | undefined
-    let timer: ReturnType<typeof setTimeout>
-    let stopped = false
-    async function refresh() {
-      if (active || stopped) return
-      clearTimeout(timer)
-      deadline = Date.now() + WEATHER_INTERVAL
-      const request = new AbortController()
-      active = request
-      const timeout = setTimeout(() => request.abort(), 12_000)
-      try {
-        const weather = await getWeather({ latitude, longitude }, request.signal)
-        if (!stopped) setData({ location, weather, failed: false })
-      } catch {
-        if (!stopped) setData((last) => ({
-          location, weather: last?.location === location ? last.weather : undefined, failed: true,
-        }))
-      } finally {
-        clearTimeout(timeout)
-        active = undefined
-        if (!stopped) timer = setTimeout(() => { void refresh() }, Math.max(0, deadline - Date.now()))
-      }
-    }
-    const wake = () => { if (!document.hidden && Date.now() >= deadline) void refresh() }
-    const online = () => { void refresh() }
-    void refresh()
-    document.addEventListener('visibilitychange', wake)
-    window.addEventListener('online', online)
-    return () => {
-      stopped = true
-      active?.abort()
-      clearTimeout(timer)
-      document.removeEventListener('visibilitychange', wake)
-      window.removeEventListener('online', online)
-    }
-  }, [latitude, longitude, location])
-
-  const current = shown?.weather
-  const { Icon, label } = current ? condition(current.code) : { Icon: Cloud, label: shown?.failed ? 'Chưa có dữ liệu' : 'Đang tải thời tiết…' }
+function WeatherWidget({ city, editCity, weather: current, failed, retry }: {
+  city: City; editCity: () => void; weather?: Weather; failed: boolean; retry: () => void
+}) {
+  const { Icon, label } = current ? condition(current.code) : { Icon: Cloud, label: failed ? 'Chưa có dữ liệu' : 'Đang tải thời tiết…' }
   return <section className="weather glass" aria-label="Thời tiết">
     <div className="weather-heading">
       <button type="button" onClick={editCity} title="Đổi thành phố">{city.name}</button>
@@ -132,6 +89,7 @@ export const WeatherWidget = memo(function WeatherWidget({ city, editCity }: { c
     <div className="weather-main">
       {current && <span className="temperature">{Math.round(current.temperature)}°<small>C</small></span>}
       <span className="weather-label">{label}</span>
+      {failed && <button type="button" className="weather-retry" onClick={retry}>Tải lại thời tiết</button>}
     </div>
     {current && <>
       <div className="humidity"><Droplets size={14} /> Độ ẩm {Math.round(current.humidity)}%</div>
@@ -147,11 +105,11 @@ export const WeatherWidget = memo(function WeatherWidget({ city, editCity }: { c
       </div>}
     </>}
     <div className="attribution">
-      {shown?.failed && current && <span>Dữ liệu lần tải trước · </span>}
+      {failed && current && <span>Dữ liệu lần tải trước · </span>}
       <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>
     </div>
   </section>
-})
+}
 
 const fallbackIcons = { google: Search, youtube: SquarePlay, github: GitFork, gmail: Mail }
 

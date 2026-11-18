@@ -41,6 +41,7 @@ export interface TimerPosition extends Point {
 
 export const widgetIds = ['clock', 'weather', 'countdown', 'pomodoro'] as const
 export type WidgetId = typeof widgetIds[number]
+export type ClockDisplay = 'date-time' | 'time' | 'date'
 
 export interface Settings {
   overlay: number
@@ -53,6 +54,7 @@ export interface Settings {
   fontSize: number
   city: City
   clockAppearance?: WidgetAppearance
+  clockDisplay?: ClockDisplay
   weatherAppearance?: WeatherAppearance
   showTimers?: boolean
   widgetVisibility?: Partial<Record<WidgetId, boolean>>
@@ -87,7 +89,7 @@ export const defaults: Settings = {
   overlay: 24, blur: 0, animate: true, defaultColor: colors[0], defaultOpacity: 96,
   width: 300, height: 240, fontSize: 15,
   city: { name: 'Hà Nội', country: 'Việt Nam', latitude: 21.0285, longitude: 105.8542 },
-  clockAppearance: defaultClockAppearance, weatherAppearance: defaultWeatherAppearance,
+  clockAppearance: defaultClockAppearance, clockDisplay: 'date-time', weatherAppearance: defaultWeatherAppearance,
   showTimers: false, widgetVisibility: {}, countdown: null, countdowns: [], pomodoro: defaultPomodoro,
   countdownPosition: defaultCountdownPosition, pomodoroPosition: defaultPomodoroPosition,
   fullHeightWidgets: true,
