@@ -173,20 +173,22 @@
 .note-style .range-field { margin-top: 6px; gap: 1px; }
 
 .bottom-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
-  align-items: end;
+  display: flex;
+  justify-content: flex-end;
   position: absolute;
   z-index: 4;
   left: var(--side);
   right: var(--side);
   bottom: 25px;
-  gap: 16px;
   pointer-events: none;
 }
 .bottom-bar > * { pointer-events: auto; }
-.dock { grid-column: 2; justify-self: center; min-width: 0; max-width: 100%; max-height: 86px; }
-.bottom-bar .add-note { grid-column: 3; }
+.shortcut-widgets { bottom: 25px; z-index: 4; --shortcut-max-width: min(760px, calc(100cqw - 310px)); }
+.dock {
+  pointer-events: auto;
+  max-width: calc(var(--shortcut-max-width) / var(--widget-scale));
+  zoom: var(--widget-scale);
+}
 .dock-list {
   @apply flex items-center gap-1.5;
   padding: 8px 9px;
@@ -221,7 +223,7 @@
 .dock-add:hover .shortcut-icon { background: #ffffff25; }
 .add-note {
   @apply flex items-center justify-center gap-2 bg-lime text-pine;
-  justify-self: end; align-self: center; white-space: nowrap;
+  white-space: nowrap;
   padding: 13px 16px;
   border-radius: 14px;
   font-size: 13px; font-weight: 600;
@@ -347,9 +349,8 @@ input[role="switch"]:checked::after { transform: translateX(15px); }
   .clock time { font-size: calc(clamp(32px, 12vw, 90px) * var(--widget-scale)); }
   .weather { max-width: calc(47vw / var(--widget-scale)); padding: 10px; border-radius: 15px; }
   .temperature { font-size: 36px; }
-  .bottom-bar { grid-template-columns: minmax(0, 1fr) auto; bottom: 13px; gap: 7px; }
-  .dock { grid-row: 1; grid-column: 1 / -1; }
-  .bottom-bar .add-note { grid-row: 2; grid-column: 2; }
+  .bottom-bar { bottom: 13px; }
+  .shortcut-widgets { bottom: 69px; --shortcut-max-width: 100cqw; }
   .canvas { inset: 68px 8px 143px; }
   .notifications { bottom: 145px; }
 }

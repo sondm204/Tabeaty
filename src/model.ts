@@ -35,11 +35,11 @@ export interface WeatherAppearance extends WidgetAppearance {
   opacity: number
 }
 
-export interface TimerPosition extends Point {
+export interface ScalablePosition extends Point {
   scale?: number
 }
 
-export const widgetIds = ['clock', 'weather', 'countdown', 'pomodoro'] as const
+export const widgetIds = ['clock', 'weather', 'countdown', 'pomodoro', 'shortcuts'] as const
 export type WidgetId = typeof widgetIds[number]
 export type ClockDisplay = 'date-time' | 'time' | 'date'
 
@@ -61,8 +61,9 @@ export interface Settings {
   countdown?: Countdown | null
   countdowns?: CountdownEvent[]
   pomodoro?: Pomodoro
-  countdownPosition?: TimerPosition
-  pomodoroPosition?: TimerPosition
+  countdownPosition?: ScalablePosition
+  pomodoroPosition?: ScalablePosition
+  shortcutPosition?: ScalablePosition
   fullHeightWidgets?: true
 }
 
@@ -82,8 +83,9 @@ export const defaultClockAppearance: WidgetAppearance = { x: 0, y: DEFAULT_WIDGE
 export const defaultWeatherAppearance: WeatherAppearance = {
   x: 1, y: DEFAULT_WIDGET_Y, color: '#f8f8f0', scale: 100, backgroundColor: '#1a2620', opacity: 61,
 }
-export const defaultCountdownPosition: TimerPosition = { x: 0, y: 1, scale: 100 }
-export const defaultPomodoroPosition: TimerPosition = { x: .5, y: 1, scale: 100 }
+export const defaultCountdownPosition: ScalablePosition = { x: 0, y: 1, scale: 100 }
+export const defaultPomodoroPosition: ScalablePosition = { x: .5, y: 1, scale: 100 }
+export const defaultShortcutPosition: ScalablePosition = { x: .5, y: 1, scale: 100 }
 
 export const defaults: Settings = {
   overlay: 24, blur: 0, animate: true, defaultColor: colors[0], defaultOpacity: 96,
@@ -91,13 +93,13 @@ export const defaults: Settings = {
   city: { name: 'Hà Nội', country: 'Việt Nam', latitude: 21.0285, longitude: 105.8542 },
   clockAppearance: defaultClockAppearance, clockDisplay: 'date-time', weatherAppearance: defaultWeatherAppearance,
   showTimers: false, widgetVisibility: {}, countdown: null, countdowns: [], pomodoro: defaultPomodoro,
-  countdownPosition: defaultCountdownPosition, pomodoroPosition: defaultPomodoroPosition,
+  countdownPosition: defaultCountdownPosition, pomodoroPosition: defaultPomodoroPosition, shortcutPosition: defaultShortcutPosition,
   fullHeightWidgets: true,
 }
 
 export function widgetVisible(settings: Settings, widget: WidgetId) {
-  return settings.widgetVisibility?.[widget]
-    ?? (widget === 'clock' || widget === 'weather' || settings.showTimers === true)
+  const timer = widget === 'countdown' || widget === 'pomodoro'
+  return settings.widgetVisibility?.[widget] ?? (!timer || settings.showTimers === true)
 }
 
 function expandWidgetPosition<T extends Point>(position?: T): T | undefined {

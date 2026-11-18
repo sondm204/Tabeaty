@@ -5,7 +5,7 @@ import { Note } from './components/Notes'
 import { exportBackup, Modal, SettingsPanel } from './components/Settings'
 import type { Confirmation, SettingsSection, WidgetTarget } from './components/Settings'
 import { Wallpaper, useWallpaper } from './components/Wallpaper'
-import { DashboardWidgets, ShortcutDock } from './components/Widgets'
+import { DashboardWidgets, ShortcutWidget } from './components/Widgets'
 import { TimerWidgets } from './components/Timers'
 import { WorkspacePicker } from './components/WorkspacePicker'
 import { createNote, noteRect, widgetVisible } from './model'
@@ -206,6 +206,9 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
     {(widgetVisible(state.settings, 'countdown') || widgetVisible(state.settings, 'pomodoro')) &&
       <TimerWidgets settings={state.settings} update={board.updateSettings} configure={editTimers} editing={editingWidgets}
         setVisibility={board.setWidgetVisibility} />}
+    {state.ready && widgetVisible(state.settings, 'shortcuts') &&
+      <ShortcutWidget shortcuts={state.shortcuts} position={state.settings.shortcutPosition} edit={editShortcuts}
+        editing={editingWidgets} update={board.updateSettings} setVisibility={board.setWidgetVisibility} />}
 
     {(state.error || state.conflicts.length > 0 || failed) && <div className="notifications">
       {state.error && <div className="notice glass" role="alert">
@@ -221,7 +224,6 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
     </div>}
 
     <footer className="bottom-bar">
-      <ShortcutDock shortcuts={state.shortcuts} edit={editShortcuts} />
       <button type="button" className="add-note" disabled={!state.ready} onClick={addNote}><Plus size={20} /><span>Ghi chú mới</span></button>
     </footer>
 

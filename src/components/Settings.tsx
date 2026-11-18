@@ -298,7 +298,7 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
             </div>
             {fileError && <p role="alert" className="form-error">{fileError}</p>}
           </WidgetGroup>
-          <WidgetGroup title="Lối tắt" target={widgetTarget === 'shortcuts' ? target : undefined}>
+          <WidgetGroup title="Lối tắt" target={widgetTarget === 'shortcuts' ? target : undefined} toggle={visibility('shortcuts', 'lối tắt')}>
             <ShortcutForm shortcuts={shortcuts} save={board.setShortcuts} />
           </WidgetGroup>
         </div>}

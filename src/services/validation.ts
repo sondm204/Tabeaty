@@ -74,7 +74,7 @@ function isCountdownList(value: unknown) {
   })
 }
 
-function isTimerPosition(value: unknown) {
+function isScalablePosition(value: unknown) {
   return record(value) && isPosition(value)
     && (value.scale === undefined || inRange(value.scale, MIN_WIDGET_SCALE, MAX_WIDGET_SCALE))
 }
@@ -103,8 +103,9 @@ export function isSettings(value: unknown): value is Settings {
     && (value.countdown === undefined || value.countdown === null || isCountdown(value.countdown))
     && (value.countdowns === undefined || isCountdownList(value.countdowns))
     && (value.pomodoro === undefined || isPomodoro(value.pomodoro))
-    && (value.countdownPosition === undefined || isTimerPosition(value.countdownPosition))
-    && (value.pomodoroPosition === undefined || isTimerPosition(value.pomodoroPosition))
+    && (value.countdownPosition === undefined || isScalablePosition(value.countdownPosition))
+    && (value.pomodoroPosition === undefined || isScalablePosition(value.pomodoroPosition))
+    && (value.shortcutPosition === undefined || isScalablePosition(value.shortcutPosition))
     && (value.fullHeightWidgets === undefined || value.fullHeightWidgets === true)
 }
 

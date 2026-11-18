@@ -112,3 +112,15 @@ it('lưu từng chế độ ngày giờ và vẫn đọc cấu hình trước kh
   }
   expect(isSettings({ ...legacy, clockDisplay: 'unknown' })).toBe(false)
 })
+
+it('hiện lối tắt với cấu hình cũ và giữ bố cục riêng khi ẩn, sao lưu hoặc bật lại', () => {
+  const { shortcutPosition, widgetVisibility, ...legacy } = defaults
+  expect(isSettings(legacy)).toBe(true)
+  expect(widgetVisible(legacy, 'shortcuts')).toBe(true)
+  const settings = { ...legacy, widgetVisibility: { shortcuts: false }, shortcutPosition: { x: .12, y: .34, scale: 125 } }
+  const restored = parseBackup(serializeBackup({ settings, notes: [], shortcuts: [] })).settings
+  expect(restored.shortcutPosition).toEqual(settings.shortcutPosition)
+  expect(widgetVisible(restored, 'shortcuts')).toBe(false)
+  expect(widgetVisible({ ...restored, widgetVisibility: { shortcuts: true } }, 'shortcuts')).toBe(true)
+  expect(isSettings({ ...settings, shortcutPosition: { ...settings.shortcutPosition, scale: 200 } })).toBe(false)
+})
