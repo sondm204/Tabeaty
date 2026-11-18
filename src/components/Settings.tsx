@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Download, Globe2, LayoutGrid, Link2, MapPin, Move, NotebookPen, Plus, Search, SlidersHorizontal, Timer, Trash2, Upload, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Download, Globe2, LayoutGrid, Link2, MapPin, Move, NotebookPen, Plus, Search, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import {
@@ -11,15 +11,15 @@ import type { Backup } from '../services/backup'
 import type { Board } from '../services/board'
 import { normalizeUrl } from '../services/validation'
 import { searchCities } from '../services/weather'
-import { IconButton, RangeField } from './Controls'
+import { IconButton, PositionFields, RangeField } from './Controls'
 import { TimerSettings } from './Timers'
 
 const sections = [
   ['appearance', 'Giao diện', SlidersHorizontal], ['widgets', 'Tiện ích', LayoutGrid], ['notes', 'Ghi chú', NotebookPen],
-  ['timers', 'Hẹn giờ', Timer],
-  ['weather', 'Thời tiết', MapPin], ['shortcuts', 'Lối tắt', Link2], ['general', 'Đồng bộ', Globe2],
+  ['shortcuts', 'Lối tắt', Link2], ['general', 'Đồng bộ', Globe2],
 ] as const
 export type SettingsSection = (typeof sections)[number][0]
+export type WidgetTarget = 'weather' | 'countdown'
 export interface Confirmation { title: string; text: string; action: string; run: () => void; destructive?: boolean; alternate?: { label: string; run: () => void } }
 
 export function Modal({ open, close, children, label, className }: {
@@ -174,14 +174,11 @@ function WidgetFields({ appearance, update }: {
     <ColorField label="Màu chữ" value={appearance.color} onChange={(color) => update({ color })} />
     <RangeField label="Kích thước" value={appearance.scale} min={MIN_WIDGET_SCALE} max={MAX_WIDGET_SCALE}
       unit="%" onChange={(scale) => update({ scale })} />
-    <RangeField label="Vị trí ngang" value={Math.round(appearance.x * 100)} min={0} max={100}
-      unit="%" onChange={(value) => update({ x: value / 100 })} />
-    <RangeField label="Vị trí dọc" value={Math.round(appearance.y * 100)} min={0} max={100}
-      unit="%" onChange={(value) => update({ y: value / 100 })} />
+    <PositionFields position={appearance} update={update} />
   </>
 }
 
-export function SettingsPanel({ section, close, select, board, state, confirm, showConflicts, editWidgetLayout }: {
+export function SettingsPanel({ section, close, select, board, state, confirm, showConflicts, editWidgetLayout, widgetTarget }: {
   section: SettingsSection | null
   close: () => void
   select: (section: SettingsSection) => void
@@ -190,13 +187,18 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
   confirm: (value: Confirmation) => void
   showConflicts: () => void
   editWidgetLayout: () => void
+  widgetTarget: WidgetTarget | null
 }) {
   const { settings, shortcuts, notes } = state
   const [fileError, setFileError] = useState('')
   const file = useRef<HTMLInputElement>(null)
+  const target = useRef<HTMLFieldSetElement>(null)
   const update = board.updateSettings
   const clock = settings.clockAppearance ?? defaultClockAppearance
   const weather = settings.weatherAppearance ?? defaultWeatherAppearance
+  useEffect(() => {
+    if (section === 'widgets' && widgetTarget) target.current?.scrollIntoView({ block: 'start' })
+  }, [section, widgetTarget])
 
   async function readBackup(input: HTMLInputElement) {
     const selected = input.files?.[0]
@@ -222,7 +224,7 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
       <nav className="settings-tabs" aria-label="Danh mục cài đặt">
         {sections.map(([id, title, Icon]) => <button type="button" key={id} aria-pressed={section === id} onClick={() => select(id)}><Icon size={16} />{title}</button>)}
       </nav>
-      <div className="settings-body">
+      <div className="settings-body" key={section}>
         <h2>{sections.find(([id]) => id === section)?.[1]}</h2>
         {section === 'appearance' && <div className="section-stack">
           <RangeField label="Lớp phủ tối" value={settings.overlay} min={0} max={75} unit="%" onChange={(overlay) => update({ overlay })} />
@@ -238,8 +240,9 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
             <WidgetFields appearance={clock} update={(patch) => update({ clockAppearance: { ...clock, ...patch } })} />
             <button type="button" className="secondary-button" onClick={() => update({ clockAppearance: defaultClockAppearance })}>Đặt lại ngày giờ</button>
           </fieldset>
-          <fieldset className="widget-settings">
+          <fieldset className="widget-settings" ref={widgetTarget === 'weather' ? target : undefined}>
             <legend>Thời tiết</legend>
+            <CityForm city={settings.city} select={(city) => update({ city })} />
             <WidgetFields appearance={weather} update={(patch) => update({ weatherAppearance: { ...weather, ...patch } })} />
             <ColorField label="Màu nền" value={weather.backgroundColor}
               onChange={(backgroundColor) => update({ weatherAppearance: { ...weather, backgroundColor } })} />
@@ -247,6 +250,7 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
               onChange={(opacity) => update({ weatherAppearance: { ...weather, opacity } })} />
             <button type="button" className="secondary-button" onClick={() => update({ weatherAppearance: defaultWeatherAppearance })}>Đặt lại giao diện thời tiết</button>
           </fieldset>
+          <TimerSettings settings={settings} update={update} countdownRef={widgetTarget === 'countdown' ? target : undefined} />
         </div>}
         {section === 'notes' && <div className="section-stack">
           <p className="form-hint">Giữ Shift khi kéo ghi chú hoặc kéo cạnh để căn theo đường dóng.</p>
@@ -260,8 +264,6 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
           </div>
           {fileError && <p role="alert" className="form-error">{fileError}</p>}
         </div>}
-        {section === 'timers' && <TimerSettings settings={settings} update={update} />}
-        {section === 'weather' && <CityForm city={settings.city} select={(city) => update({ city })} />}
         {section === 'shortcuts' && <ShortcutForm shortcuts={shortcuts} save={board.setShortcuts} />}
         {section === 'general' && <div className="section-stack">
           <p className="form-hint">Cài NoteScape trên cả hai máy, dùng cùng hệ trình duyệt và cùng tài khoản, rồi bật đồng bộ dữ liệu tiện ích. Chrome và Edge có hệ đồng bộ riêng.</p>

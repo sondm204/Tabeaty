@@ -2,10 +2,10 @@
 
 NoteScape thay trang Tab mới của Chromium bằng bảng ghi chú nổi, đồng hồ tiếng Việt, thời tiết và lối tắt. Giao diện và ghi chú đã lưu mở được khi ngoại tuyến. Ảnh nền được tải từ Picsum và đổi sau khoảng 5 phút hoặc khi bấm **Đổi hình nền**. Bạn có thể kéo ghi chú bằng thanh tiêu đề, đổi kích thước ở cạnh hoặc góc và chỉnh màu, độ đậm nền, cỡ chữ qua biểu tượng bảng màu.
 
-- **Bố cục tiện ích**. Bật nút **Chỉnh bố cục tiện ích** trên thanh trên cùng để kéo ngày giờ và thời tiết bằng tay nắm, hoặc kéo tay nắm góc để đổi kích thước. Trong **Cài đặt → Tiện ích** vẫn có màu chữ và các thanh điều chỉnh. Thẻ thời tiết có thêm màu và độ đậm nền.
+- **Bố cục tiện ích**. Bật **Chỉnh bố cục tiện ích** để kéo từng thẻ ngày giờ, thời tiết, Countdown và Pomodoro. Kéo góc thẻ ngày giờ hoặc thời tiết để đổi kích thước. Trong **Cài đặt → Tiện ích** có các thanh chỉnh vị trí, cài đặt giao diện và mục chọn thành phố.
 - **Căn và xếp ghi chú**. Giữ **Shift** khi kéo ghi chú hoặc kéo tay nắm đổi kích thước để căn theo cạnh hoặc tâm. Thả chuột khi đường dóng hiện để lưu kết quả. Nút **Xếp ghi chú theo lưới** xếp từ trên xuống dưới, giữ nguyên kích thước và vị trí của ghi chú đã khóa. Khi không đủ chỗ, ứng dụng giữ bố cục hiện tại.
 - **Ghi chú định dạng**. Bấm nút **Bật định dạng ghi chú** (biểu tượng chữ T) để mở trình soạn thảo với chữ đậm, nghiêng, danh sách gạch đầu dòng, danh sách đánh số và checklist có thể đánh dấu. Nội dung văn bản hiện tại được chuyển sang trình soạn thảo. Dữ liệu định dạng dùng chung hạn mức lưu trữ với nội dung.
-- **Hẹn giờ**. Mở **Tiện ích hẹn giờ** trên thanh trên cùng để hiện Countdown và Pomodoro. Trong **Cài đặt → Hẹn giờ**, đặt ngày giờ cho Countdown và độ dài phiên tập trung/nghỉ. Pomodoro có nút bắt đầu, tạm dừng, tiếp tục, đặt lại và chuyển phiên. Khi hết giờ, bấm nút bắt đầu phiên kế tiếp. Đồng hồ dựa trên mốc thời gian đã lưu để tính thời gian còn lại khi mở lại tab.
+- **Hẹn giờ**. Mở **Tiện ích hẹn giờ** trên thanh trên cùng để hiện Countdown và Pomodoro. Trong **Cài đặt → Tiện ích**, đặt ngày giờ cho Countdown và độ dài phiên tập trung/nghỉ. Pomodoro có nút bắt đầu, tạm dừng, tiếp tục, đặt lại và chuyển phiên. Khi hết giờ, bấm nút bắt đầu phiên kế tiếp. Đồng hồ dựa trên mốc thời gian đã lưu để tính thời gian còn lại khi mở lại tab.
 
 ## Cài đặt và phát triển
 
@@ -72,7 +72,7 @@ Extension chỉ khai báo quyền `storage` và quyền truy cập hai máy ch�
 - [ ] Đổi ảnh bằng tay, đợi khoảng 5 phút rồi thử đưa tab xuống nền và quay lại sau khi quá hạn. Thử khi mất mạng để kiểm tra ảnh hiện tại hoặc nền chuyển sắc.
 - [ ] Đổi thành phố, kiểm tra nhiệt độ, độ ẩm và ba ngày dự báo. Thử tên thành phố không tồn tại.
 - [ ] Trong **Cài đặt → Tiện ích**, đổi màu, kích thước và vị trí của ngày giờ và thời tiết. Tải lại tab để kiểm tra cài đặt đã lưu rồi thử đặt lại cả hai.
-- [ ] Bật **Chỉnh bố cục tiện ích**, kéo và đổi kích thước cả hai tiện ích trực tiếp. Mở **Tiện ích hẹn giờ**, đặt mốc Countdown, rồi bắt đầu, tạm dừng và tiếp tục Pomodoro. Tải lại tab và kiểm tra thời gian còn lại.
+- [ ] Mở **Tiện ích hẹn giờ**, thử di chuyển riêng Countdown và Pomodoro khi bật **Chỉnh bố cục tiện ích**. Đặt mốc Countdown, bắt đầu rồi tạm dừng và tiếp tục Pomodoro. Tải lại tab và kiểm tra vị trí cùng thời gian còn lại.
 - [ ] Thêm, sửa, đổi thứ tự, xóa và bấm mở lối tắt. Thử URL có giao thức không được hỗ trợ.
 - [ ] Xuất và nhập JSON, sau đó thử nhập tệp sai định dạng.
 - [ ] Mở hai tab, chỉnh cùng ghi chú để kiểm tra cập nhật và xung đột. Xóa ở một tab rồi đối chiếu tab kia.

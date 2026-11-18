@@ -4,19 +4,21 @@ import type { CSSProperties, PointerEvent, ReactNode } from 'react'
 import { clamp, MAX_WIDGET_SCALE, MIN_WIDGET_SCALE, relativePoint } from '../model'
 import type { Point, Rect, Size, WidgetAppearance } from '../model'
 
+type WidgetLayout = Point & Partial<Pick<WidgetAppearance, 'color' | 'scale'>>
+
 interface Gesture {
   pointer: number
   start: Point
   rect: Rect
   area: Size
-  appearance: WidgetAppearance
+  appearance: WidgetLayout
   resize: boolean
   leftHandle: boolean
 }
 
 export function EditableWidget({ label, appearance, editing, update, style, children }: {
   label: string
-  appearance: WidgetAppearance
+  appearance: WidgetLayout
   editing: boolean
   update: (patch: Partial<WidgetAppearance>) => void
   style?: CSSProperties
@@ -55,7 +57,8 @@ export function EditableWidget({ label, appearance, editing, update, style, chil
       // Project the pointer movement onto the original diagonal to scale both axes.
       const { width, height } = active.rect
       const distance = (dx * width * (active.leftHandle ? -1 : 1) + dy * height) / (width ** 2 + height ** 2)
-      return { scale: clamp(Math.round(active.appearance.scale * (1 + distance)), MIN_WIDGET_SCALE, MAX_WIDGET_SCALE) }
+      const scale = active.appearance.scale ?? 100
+      return { scale: clamp(Math.round(scale * (1 + distance)), MIN_WIDGET_SCALE, MAX_WIDGET_SCALE) }
     }
     return relativePoint({ x: active.rect.x + dx, y: active.rect.y + dy }, active.rect, active.area, active.appearance)
   }
@@ -71,7 +74,8 @@ export function EditableWidget({ label, appearance, editing, update, style, chil
   const properties = {
     ...style,
     '--widget-x': `${layout.x * 100}%`, '--widget-y': `${layout.y * 100}%`,
-    '--widget-scale': layout.scale / 100, '--widget-color': layout.color,
+    '--widget-scale': layout.scale === undefined ? undefined : layout.scale / 100,
+    '--widget-color': layout.color,
   } as CSSProperties
 
   const handles = {
@@ -89,9 +93,9 @@ export function EditableWidget({ label, appearance, editing, update, style, chil
     {editing && <>
       <button type="button" className="widget-handle widget-move" aria-label={`Di chuyển ${label}`} title={`Di chuyển ${label}`}
         onPointerDown={(event) => start(event, false)} {...handles}><Grip size={16} /></button>
-      <button type="button" className={`widget-handle widget-resize ${leftHandle ? 'widget-resize-left' : ''}`}
+      {appearance.scale !== undefined && <button type="button" className={`widget-handle widget-resize ${leftHandle ? 'widget-resize-left' : ''}`}
         aria-label={`Đổi kích thước ${label}`} title={`Đổi kích thước ${label}`}
-        onPointerDown={(event) => start(event, true)} {...handles}>{leftHandle ? <MoveDiagonal size={14} /> : <MoveDiagonal2 size={14} />}</button>
+        onPointerDown={(event) => start(event, true)} {...handles}>{leftHandle ? <MoveDiagonal size={14} /> : <MoveDiagonal2 size={14} />}</button>}
     </>}
   </div>
 }

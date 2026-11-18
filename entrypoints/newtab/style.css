@@ -366,19 +366,8 @@ input[role="switch"]:checked::after { transform: translateX(15px); }
 .rich-content li[data-type="taskItem"] > label { flex-shrink: 0; }
 .rich-content li[data-type="taskItem"][data-checked="true"] > div > p { text-decoration: line-through; opacity: .65; }
 
-.timer-widgets {
-  position: absolute;
-  left: var(--side);
-  bottom: 108px;
-  z-index: 3;
-  width: min(440px, calc(100% - 2 * var(--side)));
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: end;
-  gap: 8px;
-  pointer-events: none;
-}
-.timer-card { pointer-events: auto; border-radius: 16px; padding: 10px 12px; min-width: 0; }
+.timer-widgets { z-index: 3; }
+.timer-card { pointer-events: auto; border-radius: 16px; padding: 10px 12px; width: min(216px, calc((100cqw - 16px) / 3)); max-height: 100cqh; overflow: auto; }
 .timer-heading { display: flex; align-items: center; gap: 6px; color: #e9f4df; }
 .timer-heading svg { flex-shrink: 0; }
 .timer-heading h2 { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -392,8 +381,11 @@ input[role="switch"]:checked::after { transform: translateX(15px); }
 .timer-link { background: #ffffff1f; }
 .timer-primary { display: inline-flex; align-items: center; gap: 4px; background: #ddf5ad; color: #253524; }
 
+@media (max-width: 1000px) {
+  .dashboard:has(.timer-widgets) .notifications { bottom: 232px; }
+}
 @media (max-width: 690px) {
-  .timer-widgets { bottom: 142px; }
+  .dashboard:has(.timer-widgets) .notifications { bottom: 280px; }
 }
 @media (max-width: 390px) {
   .top-actions { gap: 3px; }

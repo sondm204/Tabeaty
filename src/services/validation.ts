@@ -43,9 +43,12 @@ export function isCity(value: unknown): value is City {
     && inRange(value.latitude, -90, 90) && inRange(value.longitude, -180, 180)
 }
 
-function isWidgetAppearance(value: unknown): value is WidgetAppearance {
+function isPosition(value: unknown) {
   return record(value) && inRange(value.x, 0, 1) && inRange(value.y, 0, 1)
-    && color(value.color) && inRange(value.scale, MIN_WIDGET_SCALE, MAX_WIDGET_SCALE)
+}
+
+function isWidgetAppearance(value: unknown): value is WidgetAppearance {
+  return record(value) && isPosition(value) && color(value.color) && inRange(value.scale, MIN_WIDGET_SCALE, MAX_WIDGET_SCALE)
 }
 
 function isWeatherAppearance(value: unknown): value is WeatherAppearance {
@@ -76,6 +79,8 @@ export function isSettings(value: unknown): value is Settings {
     && (value.showTimers === undefined || typeof value.showTimers === 'boolean')
     && (value.countdown === undefined || value.countdown === null || isCountdown(value.countdown))
     && (value.pomodoro === undefined || isPomodoro(value.pomodoro))
+    && (value.countdownPosition === undefined || isPosition(value.countdownPosition))
+    && (value.pomodoroPosition === undefined || isPosition(value.pomodoroPosition))
 }
 
 export function isShortcuts(value: unknown): value is Shortcut[] {

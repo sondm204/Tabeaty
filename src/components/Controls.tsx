@@ -1,9 +1,21 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { Point } from '../model'
 
 export function IconButton({ label, children, className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string; children: ReactNode
 }) {
   return <button type="button" className={`icon-button ${className}`} title={label} aria-label={label} {...props}>{children}</button>
+}
+
+export function PositionFields({ position, update }: {
+  position: Point; update: (patch: Partial<Point>) => void
+}) {
+  return <>
+    <RangeField label="Vị trí ngang" value={Math.round(position.x * 100)} min={0} max={100}
+      unit="%" onChange={(value) => update({ x: value / 100 })} />
+    <RangeField label="Vị trí dọc" value={Math.round(position.y * 100)} min={0} max={100}
+      unit="%" onChange={(value) => update({ y: value / 100 })} />
+  </>
 }
 
 export function RangeField({ label, value, min, max, unit, onChange }: {

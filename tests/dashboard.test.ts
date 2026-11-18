@@ -67,6 +67,16 @@ describe('Ghi chú định dạng', () => {
 })
 
 describe('Hẹn giờ', () => {
+  it('khôi phục bố cục hẹn giờ riêng và vẫn đọc được bản sao lưu cũ', () => {
+    const { countdownPosition, pomodoroPosition, ...old } = defaults
+    const backup = { notes: [], shortcuts: [], settings: old }
+    expect(parseBackup(serializeBackup(backup)).settings).toEqual(old)
+    const settings = { ...old, countdownPosition: { x: .4, y: .2 }, pomodoroPosition: { x: .8, y: .65 } }
+    expect(parseBackup(serializeBackup({ ...backup, settings })).settings).toEqual(settings)
+    expect(isSettings({ ...settings, countdownPosition: { x: 1.1, y: .2 } })).toBe(false)
+    expect(isSettings({ ...settings, pomodoroPosition: { x: .8, y: -1 } })).toBe(false)
+  })
+
   it('giữ thời gian còn lại khi tạm dừng và chuyển pha khi hết giờ', () => {
     const running = togglePomodoro(defaultPomodoro, 1000)
     const paused = togglePomodoro(running, 2000)

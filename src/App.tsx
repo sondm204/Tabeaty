@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { IconButton } from './components/Controls'
 import { Note } from './components/Notes'
 import { exportBackup, Modal, SettingsPanel } from './components/Settings'
-import type { Confirmation, SettingsSection } from './components/Settings'
+import type { Confirmation, SettingsSection, WidgetTarget } from './components/Settings'
 import { Wallpaper, useWallpaper } from './components/Wallpaper'
 import { DashboardWidgets, ShortcutDock } from './components/Widgets'
 import { TimerWidgets } from './components/Timers'
@@ -27,6 +27,7 @@ export function App() {
   const state = useSyncExternalStore(board.subscribe, board.snapshot)
   const { images, loading, failed, refresh } = useWallpaper()
   const [section, setSection] = useState<SettingsSection | null>(null)
+  const [widgetTarget, setWidgetTarget] = useState<WidgetTarget | null>(null)
   const [focus, setFocus] = useState('')
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [area, setArea] = useState<Size>({ width: 0, height: 0 })
@@ -133,8 +134,19 @@ export function App() {
   }, [board])
 
   const resolveNote = useCallback((id: string) => resolve(noteKey(id)), [resolve])
-  const editWeather = useCallback(() => { if (state.ready) setSection('weather') }, [state.ready])
-  const editTimers = useCallback(() => setSection('timers'), [])
+  const editWeather = useCallback(() => {
+    if (!state.ready) return
+    setWidgetTarget('weather')
+    setSection('widgets')
+  }, [state.ready])
+  const editTimers = useCallback(() => {
+    setWidgetTarget('countdown')
+    setSection('widgets')
+  }, [])
+  const selectSettings = (next: SettingsSection | null) => {
+    setWidgetTarget(null)
+    setSection(next)
+  }
   const editShortcuts = useCallback(() => { if (state.ready) setSection('shortcuts') }, [state.ready])
   const showConflicts = () => { if (state.conflicts[0]) resolve(state.conflicts[0]) }
   const run = (action: () => void) => {
@@ -173,7 +185,7 @@ export function App() {
       </div>}
     </div>
 
-    {state.settings.showTimers && <TimerWidgets settings={state.settings} update={board.updateSettings} configure={editTimers} />}
+    {state.settings.showTimers && <TimerWidgets settings={state.settings} update={board.updateSettings} configure={editTimers} editing={editingWidgets} />}
 
     {(state.error || state.conflicts.length > 0 || failed || layoutMessage) && <div className="notifications">
       {layoutMessage && <div className="notice glass" role="status">
@@ -204,8 +216,8 @@ export function App() {
       <button type="button" className="add-note" disabled={!state.ready} onClick={addNote}><Plus size={20} /><span>Ghi chú mới</span></button>
     </footer>
 
-    <SettingsPanel section={section} close={() => setSection(null)} select={setSection} board={board} state={state} confirm={setConfirmation}
-      showConflicts={showConflicts} editWidgetLayout={() => { setSection(null); setEditingWidgets(true) }} />
+    <SettingsPanel section={section} close={() => selectSettings(null)} select={selectSettings} board={board} state={state} confirm={setConfirmation}
+      widgetTarget={widgetTarget} showConflicts={showConflicts} editWidgetLayout={() => { selectSettings(null); setEditingWidgets(true) }} />
     <Modal open={confirmation !== null} close={() => setConfirmation(null)} label={confirmation?.title ?? 'Xác nhận'} className="confirmation-modal">
       {confirmation && <div className="confirmation-inner">
         <h2>{confirmation.title}</h2><p>{confirmation.text}</p>

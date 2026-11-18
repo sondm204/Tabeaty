@@ -50,6 +50,8 @@ export interface Settings {
   showTimers?: boolean
   countdown?: Countdown | null
   pomodoro?: Pomodoro
+  countdownPosition?: Point
+  pomodoroPosition?: Point
 }
 
 export interface Shortcut { id: string; label: string; url: string }
@@ -67,6 +69,8 @@ export const defaultClockAppearance: WidgetAppearance = { x: 0, y: 0, color: '#f
 export const defaultWeatherAppearance: WeatherAppearance = {
   x: 1, y: 0, color: '#f8f8f0', scale: 100, backgroundColor: '#1a2620', opacity: 61,
 }
+export const defaultCountdownPosition: Point = { x: 0, y: 1 }
+export const defaultPomodoroPosition: Point = { x: .5, y: 1 }
 
 export const defaults: Settings = {
   overlay: 24, blur: 0, animate: true, defaultColor: colors[0], defaultOpacity: 96,
@@ -74,6 +78,7 @@ export const defaults: Settings = {
   city: { name: 'Hà Nội', country: 'Việt Nam', latitude: 21.0285, longitude: 105.8542 },
   clockAppearance: defaultClockAppearance, weatherAppearance: defaultWeatherAppearance,
   showTimers: false, countdown: null, pomodoro: defaultPomodoro,
+  countdownPosition: defaultCountdownPosition, pomodoroPosition: defaultPomodoroPosition,
 }
 
 export const defaultShortcuts: Shortcut[] = [
