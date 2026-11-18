@@ -5,33 +5,32 @@ import {
   GitFork, Globe2, Mail, Plus, Search, Sun, SquarePlay,
 } from 'lucide-react'
 import { defaultClockAppearance, defaultWeatherAppearance } from '../model'
-import type { City, Settings, Shortcut, WidgetAppearance } from '../model'
+import type { City, Settings, Shortcut } from '../model'
 import { getWeather } from '../services/weather'
 import type { Weather } from '../services/weather'
+import { EditableWidget } from './EditableWidget'
 
 const timeFormat = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 const dayFormat = new Intl.DateTimeFormat('vi-VN', { weekday: 'long' })
 const dateFormat = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const forecastDay = new Intl.DateTimeFormat('vi-VN', { weekday: 'short', timeZone: 'UTC' })
 
-function widgetStyle({ x, y, scale, color }: WidgetAppearance) {
-  return {
-    '--widget-x': `${x * 100}%`, '--widget-y': `${y * 100}%`,
-    '--widget-scale': scale / 100, '--widget-color': color,
-  } as CSSProperties
-}
-
-export const DashboardWidgets = memo(function DashboardWidgets({ settings, editCity }: { settings: Settings; editCity: () => void }) {
+export const DashboardWidgets = memo(function DashboardWidgets({ settings, editCity, editing, update }: {
+  settings: Settings; editCity: () => void; editing: boolean; update: (patch: Partial<Settings>) => void
+}) {
   const clock = settings.clockAppearance ?? defaultClockAppearance
   const weather = settings.weatherAppearance ?? defaultWeatherAppearance
   const weatherStyle = {
-    ...widgetStyle(weather),
     '--weather-background': weather.backgroundColor,
     '--weather-opacity': `${weather.opacity}%`,
-  }
-  return <div className="widgets">
-    <div className="widget" style={widgetStyle(clock)}><Clock /></div>
-    <div className="widget" style={weatherStyle}><WeatherWidget city={settings.city} editCity={editCity} /></div>
+  } as CSSProperties
+  return <div className={`widgets${editing ? ' widgets-editing' : ''}`}>
+    <EditableWidget label="ngày giờ" appearance={clock} editing={editing}
+      update={(patch) => update({ clockAppearance: { ...clock, ...patch } })}><Clock /></EditableWidget>
+    <EditableWidget label="thời tiết" appearance={weather} editing={editing} style={weatherStyle}
+      update={(patch) => update({ weatherAppearance: { ...weather, ...patch } })}>
+      <WeatherWidget city={settings.city} editCity={editCity} />
+    </EditableWidget>
   </div>
 })
 

@@ -1,5 +1,6 @@
 import { MAX_HEIGHT, MAX_SHORTCUTS, MAX_WIDGET_SCALE, MAX_WIDTH, MIN_HEIGHT, MIN_WIDGET_SCALE, MIN_WIDTH } from '../model'
 import type { City, Settings, Shortcut, StickyNote, WeatherAppearance, WidgetAppearance } from '../model'
+import { parseRichText } from '../rich-text'
 
 export const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -29,6 +30,7 @@ export function normalizeUrl(text: string): string {
 
 export function isNote(value: unknown): value is StickyNote {
   return record(value) && id(value.id) && string(value.title, 120) && string(value.content)
+    && (value.format === undefined || (value.format === 'rich' && !!parseRichText(value.content)))
     && inRange(value.x, 0, 1) && inRange(value.y, 0, 1)
     && inRange(value.width, MIN_WIDTH, MAX_WIDTH) && inRange(value.height, MIN_HEIGHT, MAX_HEIGHT)
     && inRange(value.zIndex, 0, Number.MAX_SAFE_INTEGER) && inRange(value.createdAt, 0, Number.MAX_SAFE_INTEGER)
@@ -51,6 +53,19 @@ function isWeatherAppearance(value: unknown): value is WeatherAppearance {
     && color(value.backgroundColor) && inRange(value.opacity, 0, 100)
 }
 
+const isTimestamp = (value: unknown) => inRange(value, 1, 253402300799999)
+
+function isCountdown(value: unknown) {
+  return record(value) && string(value.title, 60) && isTimestamp(value.endsAt)
+}
+
+function isPomodoro(value: unknown) {
+  return record(value) && inRange(value.focusMinutes, 1, 120) && inRange(value.breakMinutes, 1, 60)
+    && (value.phase === 'focus' || value.phase === 'break')
+    && (value.endsAt === null || isTimestamp(value.endsAt))
+    && (value.pausedMs === null || (value.endsAt === null && inRange(value.pausedMs, 1, 120 * 60_000)))
+}
+
 export function isSettings(value: unknown): value is Settings {
   return record(value) && inRange(value.overlay, 0, 75) && inRange(value.blur, 0, 16)
     && typeof value.animate === 'boolean' && color(value.defaultColor)
@@ -58,6 +73,9 @@ export function isSettings(value: unknown): value is Settings {
     && inRange(value.height, MIN_HEIGHT, MAX_HEIGHT) && inRange(value.fontSize, 12, 28) && isCity(value.city)
     && (value.clockAppearance === undefined || isWidgetAppearance(value.clockAppearance))
     && (value.weatherAppearance === undefined || isWeatherAppearance(value.weatherAppearance))
+    && (value.showTimers === undefined || typeof value.showTimers === 'boolean')
+    && (value.countdown === undefined || value.countdown === null || isCountdown(value.countdown))
+    && (value.pomodoro === undefined || isPomodoro(value.pomodoro))
 }
 
 export function isShortcuts(value: unknown): value is Shortcut[] {

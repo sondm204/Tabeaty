@@ -180,6 +180,18 @@ export class Board {
     }
   }
 
+  moveNotes = (positions: ReadonlyMap<string, Pick<StickyNote, 'x' | 'y'>>) => {
+    let moved = 0
+    for (const note of this.state.notes) {
+      const point = positions.get(note.id)
+      if (!point || note.locked || (point.x === note.x && point.y === note.y)) continue
+      this.stage(noteKey(note.id), { ...note, ...point })
+      moved++
+    }
+    if (moved) this.changed()
+    return moved
+  }
+
   deleteNote = (id: string) => {
     this.stage(noteKey(id), null)
     this.changed()

@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Download, Globe2, LayoutGrid, Link2, MapPin, NotebookPen, Plus, Search, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Download, Globe2, LayoutGrid, Link2, MapPin, Move, NotebookPen, Plus, Search, SlidersHorizontal, Timer, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import {
@@ -12,9 +12,11 @@ import type { Board } from '../services/board'
 import { normalizeUrl } from '../services/validation'
 import { searchCities } from '../services/weather'
 import { IconButton, RangeField } from './Controls'
+import { TimerSettings } from './Timers'
 
 const sections = [
   ['appearance', 'Giao diện', SlidersHorizontal], ['widgets', 'Tiện ích', LayoutGrid], ['notes', 'Ghi chú', NotebookPen],
+  ['timers', 'Hẹn giờ', Timer],
   ['weather', 'Thời tiết', MapPin], ['shortcuts', 'Lối tắt', Link2], ['general', 'Đồng bộ', Globe2],
 ] as const
 export type SettingsSection = (typeof sections)[number][0]
@@ -179,7 +181,7 @@ function WidgetFields({ appearance, update }: {
   </>
 }
 
-export function SettingsPanel({ section, close, select, board, state, confirm, showConflicts }: {
+export function SettingsPanel({ section, close, select, board, state, confirm, showConflicts, editWidgetLayout }: {
   section: SettingsSection | null
   close: () => void
   select: (section: SettingsSection) => void
@@ -187,6 +189,7 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
   state: ReturnType<Board['snapshot']>
   confirm: (value: Confirmation) => void
   showConflicts: () => void
+  editWidgetLayout: () => void
 }) {
   const { settings, shortcuts, notes } = state
   const [fileError, setFileError] = useState('')
@@ -229,6 +232,7 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
           <RangeField label="Độ đậm nền ghi chú" value={settings.defaultOpacity} min={0} max={100} unit="%" onChange={(defaultOpacity) => update({ defaultOpacity })} />
         </div>}
         {section === 'widgets' && <div className="section-stack">
+          <button className="secondary-button" type="button" onClick={editWidgetLayout}><Move size={16} /> Kéo thả tiện ích trên bảng</button>
           <fieldset className="widget-settings">
             <legend>Ngày giờ</legend>
             <WidgetFields appearance={clock} update={(patch) => update({ clockAppearance: { ...clock, ...patch } })} />
@@ -245,7 +249,7 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
           </fieldset>
         </div>}
         {section === 'notes' && <div className="section-stack">
-          <p className="form-hint">Giữ Shift khi kéo ghi chú để căn theo đường dóng ở cạnh và tâm.</p>
+          <p className="form-hint">Giữ Shift khi kéo ghi chú hoặc kéo cạnh để căn theo đường dóng.</p>
           <RangeField label="Chiều rộng mặc định" value={settings.width} min={MIN_WIDTH} max={MAX_WIDTH} unit=" px" onChange={(width) => update({ width })} />
           <RangeField label="Chiều cao mặc định" value={settings.height} min={MIN_HEIGHT} max={MAX_HEIGHT} unit=" px" onChange={(height) => update({ height })} />
           <RangeField label="Cỡ chữ mặc định" value={settings.fontSize} min={12} max={28} unit=" px" onChange={(fontSize) => update({ fontSize })} />
@@ -256,6 +260,7 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
           </div>
           {fileError && <p role="alert" className="form-error">{fileError}</p>}
         </div>}
+        {section === 'timers' && <TimerSettings settings={settings} update={update} />}
         {section === 'weather' && <CityForm city={settings.city} select={(city) => update({ city })} />}
         {section === 'shortcuts' && <ShortcutForm shortcuts={shortcuts} save={board.setShortcuts} />}
         {section === 'general' && <div className="section-stack">

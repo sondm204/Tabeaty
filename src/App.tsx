@@ -1,4 +1,4 @@
-import { AlertCircle, Check, LoaderCircle, Image, NotebookPen, Plus, Settings2 } from 'lucide-react'
+import { AlertCircle, Check, Grid2X2, LoaderCircle, Image, Move, NotebookPen, Plus, Settings2, Timer } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { IconButton } from './components/Controls'
 import { Note } from './components/Notes'
@@ -6,10 +6,12 @@ import { exportBackup, Modal, SettingsPanel } from './components/Settings'
 import type { Confirmation, SettingsSection } from './components/Settings'
 import { Wallpaper, useWallpaper } from './components/Wallpaper'
 import { DashboardWidgets, ShortcutDock } from './components/Widgets'
+import { TimerWidgets } from './components/Timers'
 import { createNote, noteRect } from './model'
-import type { Point, Size } from './model'
-import { snapNote } from './snap'
-import type { SnapGuides } from './snap'
+import type { Rect, Size } from './model'
+import { snapNote, snapResize } from './snap'
+import type { ResizeDirection, SnapGuides } from './snap'
+import { arrangeNotes } from './note-grid'
 import { Board } from './services/board'
 import { SyncStorage, noteKey } from './services/storage'
 import type { Changes, StorageKey } from './services/storage'
@@ -29,6 +31,8 @@ export function App() {
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [area, setArea] = useState<Size>({ width: 0, height: 0 })
   const [guides, setGuides] = useState<SnapGuides>({})
+  const [editingWidgets, setEditingWidgets] = useState(false)
+  const [layoutMessage, setLayoutMessage] = useState('')
   const canvas = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
@@ -66,6 +70,25 @@ export function App() {
     }
   }, [board])
 
+  useEffect(() => {
+    if (!editingWidgets) return
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented && !document.querySelector('dialog[open]')) setEditingWidgets(false)
+    }
+    window.addEventListener('keydown', escape)
+    return () => window.removeEventListener('keydown', escape)
+  }, [editingWidgets])
+
+  function arrange() {
+    const positions = arrangeNotes(board.snapshot().notes, area)
+    if (!positions) {
+      setLayoutMessage('Vùng làm việc chưa đủ chỗ để xếp tất cả ghi chú.')
+      return
+    }
+    const moved = board.moveNotes(positions)
+    setLayoutMessage(moved ? `Đã xếp ${moved} ghi chú theo lưới.` : 'Ghi chú đã ở đúng vị trí lưới.')
+  }
+
   function addNote() {
     const { notes, settings } = board.snapshot()
     const offset = notes.length % 7 * .045
@@ -79,9 +102,11 @@ export function App() {
     if (highest && highest.id !== id) board.updateNote(id, { zIndex: highest.zIndex + 1 })
   }, [board])
 
-  const findSnap = useCallback((id: string, point: Point, size: Size) => {
+  const findSnap = useCallback((id: string, rect: Rect, direction?: ResizeDirection) => {
     const neighbors = board.snapshot().notes.filter((note) => note.id !== id).map((note) => noteRect(note, area))
-    return snapNote(point, size, area, neighbors)
+    if (direction) return snapResize(rect, area, neighbors, direction)
+    const { position, guides } = snapNote(rect, rect, area, neighbors)
+    return { rect: { ...rect, ...position }, guides }
   }, [area, board])
 
   const showGuides = useCallback((next: SnapGuides) => {
@@ -109,6 +134,7 @@ export function App() {
 
   const resolveNote = useCallback((id: string) => resolve(noteKey(id)), [resolve])
   const editWeather = useCallback(() => { if (state.ready) setSection('weather') }, [state.ready])
+  const editTimers = useCallback(() => setSection('timers'), [])
   const editShortcuts = useCallback(() => { if (state.ready) setSection('shortcuts') }, [state.ready])
   const showConflicts = () => { if (state.conflicts[0]) resolve(state.conflicts[0]) }
   const run = (action: () => void) => {
@@ -124,11 +150,18 @@ export function App() {
         <button type="button" className="wallpaper-action glass" disabled={loading} onClick={refresh} aria-label="Đổi hình nền" title="Đổi hình nền">
           {loading ? <LoaderCircle size={17} className="spinner" /> : <Image size={17} />} <span>Đổi hình nền</span>
         </button>
+        <IconButton className="settings-action glass" label="Xếp ghi chú theo lưới"
+          disabled={!state.ready || !area.width || !area.height || !state.notes.some((note) => !note.locked)}
+          onClick={arrange}><Grid2X2 size={17} /></IconButton>
+        <IconButton className="settings-action glass" label="Chỉnh bố cục tiện ích" aria-pressed={editingWidgets}
+          disabled={!state.ready} onClick={() => setEditingWidgets(!editingWidgets)}><Move size={17} /></IconButton>
+        <IconButton className="settings-action glass" label="Tiện ích hẹn giờ" aria-pressed={!!state.settings.showTimers}
+          disabled={!state.ready} onClick={() => board.updateSettings({ showTimers: !state.settings.showTimers })}><Timer size={18} /></IconButton>
         <IconButton className="settings-action glass" label="Cài đặt" disabled={!state.ready} onClick={() => setSection('appearance')}><Settings2 size={18} /></IconButton>
       </div>
     </header>
 
-    <DashboardWidgets settings={state.settings} editCity={editWeather} />
+    <DashboardWidgets settings={state.settings} editCity={editWeather} editing={editingWidgets} update={board.updateSettings} />
 
     <div ref={canvas} className="canvas" role="region" aria-label="Bảng ghi chú">
       {area.width > 0 && area.height > 0 && state.notes.map((note, index) => <Note key={note.id} note={note} area={area} layer={index + 1}
@@ -140,7 +173,14 @@ export function App() {
       </div>}
     </div>
 
-    {(state.error || state.conflicts.length > 0 || failed) && <div className="notifications">
+    {state.settings.showTimers && <TimerWidgets settings={state.settings} update={board.updateSettings} configure={editTimers} />}
+
+    {(state.error || state.conflicts.length > 0 || failed || layoutMessage) && <div className="notifications">
+      {layoutMessage && <div className="notice glass" role="status">
+        <Grid2X2 size={17} /><div>{layoutMessage}<div className="notice-actions">
+          <button type="button" onClick={() => setLayoutMessage('')}>Đóng</button>
+        </div></div>
+      </div>}
       {state.error && <div className="notice glass" role="alert">
         <AlertCircle size={17} /><div>{state.error}<div className="notice-actions">
           <button type="button" onClick={() => { void (state.ready ? board.flush() : board.load()) }}>Thử lại</button>
@@ -164,7 +204,8 @@ export function App() {
       <button type="button" className="add-note" disabled={!state.ready} onClick={addNote}><Plus size={20} /><span>Ghi chú mới</span></button>
     </footer>
 
-    <SettingsPanel section={section} close={() => setSection(null)} select={setSection} board={board} state={state} confirm={setConfirmation} showConflicts={showConflicts} />
+    <SettingsPanel section={section} close={() => setSection(null)} select={setSection} board={board} state={state} confirm={setConfirmation}
+      showConflicts={showConflicts} editWidgetLayout={() => { setSection(null); setEditingWidgets(true) }} />
     <Modal open={confirmation !== null} close={() => setConfirmation(null)} label={confirmation?.title ?? 'Xác nhận'} className="confirmation-modal">
       {confirmation && <div className="confirmation-inner">
         <h2>{confirmation.title}</h2><p>{confirmation.text}</p>

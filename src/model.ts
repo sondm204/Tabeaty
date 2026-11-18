@@ -1,3 +1,6 @@
+import { defaultPomodoro } from './timers'
+import type { Countdown, Pomodoro } from './timers'
+
 export interface Point { x: number; y: number }
 export interface Size { width: number; height: number }
 export interface Rect extends Point, Size {}
@@ -5,6 +8,7 @@ export interface StickyNote extends Rect {
   id: string
   title: string
   content: string
+  format?: 'rich'
   zIndex: number
   backgroundColor: string
   textColor: string
@@ -43,6 +47,9 @@ export interface Settings {
   city: City
   clockAppearance?: WidgetAppearance
   weatherAppearance?: WeatherAppearance
+  showTimers?: boolean
+  countdown?: Countdown | null
+  pomodoro?: Pomodoro
 }
 
 export interface Shortcut { id: string; label: string; url: string }
@@ -66,6 +73,7 @@ export const defaults: Settings = {
   width: 300, height: 240, fontSize: 15,
   city: { name: 'Hà Nội', country: 'Việt Nam', latitude: 21.0285, longitude: 105.8542 },
   clockAppearance: defaultClockAppearance, weatherAppearance: defaultWeatherAppearance,
+  showTimers: false, countdown: null, pomodoro: defaultPomodoro,
 }
 
 export const defaultShortcuts: Shortcut[] = [

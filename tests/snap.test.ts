@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { snapNote } from '../src/snap'
+import { snapNote, snapResize } from '../src/snap'
 
 const area = { width: 1000, height: 800 }
 const size = { width: 200, height: 150 }
@@ -41,5 +41,30 @@ describe('Căn chỉnh ghi chú', () => {
     const result = snapNote(point, size, area, [nearEdge])
     expect(result.position.x).toBe(800)
     expect(result.position.x + size.width).toBeLessThanOrEqual(area.width)
+  })
+})
+
+describe('Căn chỉnh khi đổi kích thước', () => {
+  it('căn hai cạnh đang kéo và giữ các cạnh đối diện', () => {
+    const raw = { x: 80, y: 40, width: 196, height: 174 }
+    expect(snapResize(raw, area, [neighbor], 'bottomRight')).toEqual({
+      rect: { x: 80, y: 40, width: 200, height: 170 },
+      guides: { x: 280, y: 210 },
+    })
+  })
+
+  it('căn tâm theo một trục khi kéo cạnh trái', () => {
+    const target = { x: 200, y: 530, width: 200, height: 160 }
+    const raw = { x: 96, y: 175, width: 404, height: 190 }
+    expect(snapResize(raw, area, [target], 'left')).toEqual({
+      rect: { x: 100, y: 175, width: 400, height: 190 },
+      guides: { x: 300, y: undefined },
+    })
+  })
+
+  it('giữ kích thước hợp lệ khi cạnh đích quá gần cạnh cố định', () => {
+    const target = { x: 296, y: 600, width: 200, height: 150 }
+    const raw = { x: 100, y: 170, width: 205, height: 160 }
+    expect(snapResize(raw, area, [target], 'right').rect).toEqual(raw)
   })
 })
