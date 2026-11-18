@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createNote, defaults, noteRect, relativePoint } from '../src/model'
+import { createNote, defaults, noteRect, relativePoint, settingsForFullHeight } from '../src/model'
 import { Board } from '../src/services/board'
 import { itemBytes, noteKey, SyncStorage } from '../src/services/storage'
 import type { Changes, Entry, SyncArea } from '../src/services/storage'
+import { firstWorkspace, readWorkspaceNames, workspaceNameKey } from '../src/workspaces'
 
 class MemorySync implements SyncArea {
   data: Record<string, Entry> = {}
@@ -85,6 +86,58 @@ describe('Bảng ghi chú và Chrome Sync', () => {
     expect(second.snapshot().notes).toEqual([])
     second.receive({ [key]: { newValue: old } })
     expect(second.snapshot().notes).toEqual([])
+  })
+
+  it('giữ khóa cũ ở workspace đầu và cô lập ghi chú, cài đặt và lối tắt giữa các workspace', async () => {
+    const other = new Board(new SyncStorage(area, '2'))
+    area.listeners.push(other.receive)
+    await other.load()
+    const note = fixture()
+    board.setNote({ ...note, title: 'Ở nhà' })
+    board.setShortcuts([{ id: 'link', label: 'A', url: 'https://example.com/' }])
+    await board.flush()
+    expect(other.snapshot().notes).toEqual([])
+    other.setNote({ ...note, title: 'Ở công ty' })
+    other.updateSettings({ overlay: 40, showTimers: true })
+    other.setShortcuts([])
+    await other.flush()
+    expect(area.data[noteKey(note.id)]?.data).toMatchObject({ title: 'Ở nhà' })
+    expect(area.data[`ws:2:${noteKey(note.id)}`]?.data).toMatchObject({ title: 'Ở công ty' })
+    expect(board.snapshot().settings).toEqual(defaults)
+    expect(board.snapshot().shortcuts[0]?.label).toBe('A')
+    const reopened = new Board(new SyncStorage(area, '2'))
+    await reopened.load()
+    expect(reopened.snapshot()).toMatchObject({
+      notes: [{ title: 'Ở công ty' }], settings: { overlay: 40, showTimers: true }, shortcuts: [],
+    })
+    other.deleteNote(note.id)
+    await other.flush()
+    expect(area.data[noteKey(note.id)]).toBeDefined()
+    expect(board.snapshot().notes[0]?.title).toBe('Ở nhà')
+    other.stop()
+  })
+
+  it('khôi phục bản nháp theo từng workspace khi thao tác đồng bộ thất bại', async () => {
+    const data = new Map<string, string>()
+    const journal = {
+      getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => { data.set(key, value) },
+      removeItem: (key: string) => { data.delete(key) },
+    }
+    const local = new Board(new SyncStorage(area), journal)
+    const other = new Board(new SyncStorage(area, '3'), journal)
+    await Promise.all([local.load(), other.load()])
+    local.setNote({ ...fixture(), title: 'Một' })
+    other.setNote({ ...fixture(), title: 'Ba' })
+    area.rejected = true
+    await Promise.all([local.flush(), other.flush()])
+    const reopened = new Board(new SyncStorage(area, '3'), journal)
+    await reopened.load()
+    expect(reopened.snapshot().notes.map((note) => note.title)).toEqual(['Ba'])
+    expect(data.size).toBe(2)
+    local.stop()
+    other.stop()
+    reopened.stop()
   })
 
   it('giữ bản đang sửa khi có cập nhật từ tab khác và lưu lựa chọn của người dùng', async () => {
@@ -176,6 +229,25 @@ describe('Bảng ghi chú và Chrome Sync', () => {
     await vi.advanceTimersByTimeAsync(5_000)
     expect(area.set).not.toHaveBeenCalled()
   })
+})
+
+it('chỉ đọc ba workspace cho phép và luôn giữ workspace đầu', () => {
+  expect(readWorkspaceNames({})).toEqual([firstWorkspace])
+  expect(readWorkspaceNames({
+    [workspaceNameKey('2')]: ' Công việc ', [workspaceNameKey('3')]: 'Cá nhân',
+    'notescape.workspace.4': 'Bỏ qua',
+  })).toEqual([firstWorkspace, { slot: '2', name: 'Công việc' }, { slot: '3', name: 'Cá nhân' }])
+})
+
+it('chỉ chuyển vị trí widget cũ sang vùng mở rộng một lần', () => {
+  const { fullHeightWidgets, ...old } = defaults
+  const expanded = settingsForFullHeight({
+    ...old, clockAppearance: { ...defaults.clockAppearance!, y: 0 }, pomodoroPosition: { x: .5, y: 1 },
+  })
+  expect(expanded.clockAppearance?.y).toBe(defaults.clockAppearance?.y)
+  expect(expanded.pomodoroPosition?.y).toBe(1)
+  expect(settingsForFullHeight(expanded)).toBe(expanded)
+  expect(settingsForFullHeight({ ...expanded, clockAppearance: { ...expanded.clockAppearance!, y: 0 } }).clockAppearance?.y).toBe(0)
 })
 
 it('đưa tọa độ tương đối về vùng khả dụng mới mà không sửa kích thước đã lưu', () => {

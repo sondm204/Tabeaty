@@ -1,6 +1,6 @@
-import { defaults, defaultShortcuts } from '../model'
+import { defaults, defaultShortcuts, settingsForFullHeight } from '../model'
 import type { Settings, Shortcut, StickyNote } from '../model'
-import { compare, decode, isKey, ITEM_LIMIT, itemBytes, noteKey, SyncQuotaError } from './storage'
+import { compare, decode, isKey, ITEM_LIMIT, noteKey, SyncQuotaError } from './storage'
 import type { Changes, Content, Entry, StorageKey, SyncStorage } from './storage'
 
 type Version = Entry | null
@@ -15,7 +15,6 @@ interface BoardState {
   error: string
 }
 type Journal = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
-const journalKey = 'notescape.pending.v1'
 const sameVersion = (a: Version, b: Version) => a === b || (!!a && !!b && compare(a, b) === 0)
 const sameData = (a: Version, b: Version) => sameVersion(a, b)
   || (!!a && !!b && JSON.stringify(a.data) === JSON.stringify(b.data))
@@ -38,6 +37,8 @@ export class Board {
 
   constructor(private readonly storage: SyncStorage, private readonly journal?: Journal) {}
 
+  private get journalKey() { return this.storage.scopedKey('notescape.pending.v1') }
+
   snapshot = () => this.state
 
   subscribe = (listener: () => void) => {
@@ -56,7 +57,7 @@ export class Board {
       .sort((a, b) => a.zIndex - b.zIndex || (a.id < b.id ? -1 : 1))
     this.state = {
       ...this.state, ...patch, notes,
-      settings: (visible.get('settings')?.data as Settings | undefined) ?? defaults,
+      settings: settingsForFullHeight((visible.get('settings')?.data as Settings | undefined) ?? defaults),
       shortcuts: (visible.get('shortcuts')?.data as Shortcut[] | undefined) ?? defaultShortcuts,
       pending: this.edits.size, conflicts: [...this.contested],
     }
@@ -74,7 +75,7 @@ export class Board {
       const { entries, invalid } = await this.storage.read()
       this.entries = entries
       this.state = { ...this.state, ready: true }
-      for (const changes of this.queuedChanges.splice(0)) this.receive(changes)
+      for (const changes of this.queuedChanges.splice(0)) this.applyChanges(changes)
       this.restoreJournal()
       this.notify({ error: invalid ? 'Một số mục lưu trữ bị lỗi định dạng và không thể hiển thị.' : '' })
       this.schedule()
@@ -85,7 +86,7 @@ export class Board {
 
   private restoreJournal() {
     try {
-      const raw = this.journal?.getItem(journalKey)
+      const raw = this.journal?.getItem(this.journalKey)
       if (!raw) return
       for (const [key, draft] of Object.entries(JSON.parse(raw) as Record<string, Edit>)) {
         if (!isKey(key) || !draft) continue
@@ -105,18 +106,25 @@ export class Board {
 
   private saveJournal() {
     try {
-      if (this.edits.size) this.journal?.setItem(journalKey, JSON.stringify(Object.fromEntries(this.edits)))
-      else this.journal?.removeItem(journalKey)
+      if (this.edits.size) this.journal?.setItem(this.journalKey, JSON.stringify(Object.fromEntries(this.edits)))
+      else this.journal?.removeItem(this.journalKey)
     } catch {
       // A failed recovery write must not clear the live edits.
     }
   }
 
   receive = (changes: Changes) => {
+    if (!this.state.ready && !this.loadTask) return
+    const scoped = this.storage.scopedChanges(changes)
+    if (!Object.keys(scoped).length) return
     if (!this.state.ready) {
-      this.queuedChanges.push(changes)
+      this.queuedChanges.push(scoped)
       return
     }
+    this.applyChanges(scoped)
+  }
+
+  private applyChanges(changes: Changes) {
     let updated = false
     for (const [key, change] of Object.entries(changes)) {
       if (!isKey(key)) continue
@@ -239,9 +247,9 @@ export class Board {
   private async persist() {
     const pending = [...this.edits].filter(([key]) => !this.contested.has(key))
     if (!pending.length) return
-    const oversized = pending.some(([key, { value }]) => value && itemBytes(key, value) > ITEM_LIMIT)
+    const oversized = pending.some(([key, { value }]) => value && this.storage.bytes(key, value) > ITEM_LIMIT)
     const deletes = pending.filter(([, edit]) => !edit.value)
-    const writes = pending.filter(([key, { value }]) => value && itemBytes(key, value) <= ITEM_LIMIT)
+    const writes = pending.filter(([key, { value }]) => value && this.storage.bytes(key, value) <= ITEM_LIMIT)
     const started = new Map(this.edits)
     let error = oversized ? 'Một mục gần hoặc vượt 8 KB. Hãy xuất JSON hoặc rút ngắn nội dung rồi thử lưu lại.' : ''
     for (const batch of [deletes, writes]) {

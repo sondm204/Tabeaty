@@ -102,8 +102,8 @@ export function TimerSettings({ settings, update, countdownRef }: {
   }
 
   return <>
-    <label className="toggle-field">Hiện tiện ích hẹn giờ
-      <input type="checkbox" role="switch" checked={settings.showTimers ?? false}
+    <label className="toggle-field timer-visibility">Hiện Countdown và Pomodoro
+      <input type="checkbox" checked={settings.showTimers ?? false}
         onChange={(event) => update({ showTimers: event.target.checked })} />
     </label>
     <fieldset className="widget-settings" ref={countdownRef}>

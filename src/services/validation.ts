@@ -81,6 +81,7 @@ export function isSettings(value: unknown): value is Settings {
     && (value.pomodoro === undefined || isPomodoro(value.pomodoro))
     && (value.countdownPosition === undefined || isPosition(value.countdownPosition))
     && (value.pomodoroPosition === undefined || isPosition(value.pomodoroPosition))
+    && (value.fullHeightWidgets === undefined || value.fullHeightWidgets === true)
 }
 
 export function isShortcuts(value: unknown): value is Shortcut[] {

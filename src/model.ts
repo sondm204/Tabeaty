@@ -52,6 +52,7 @@ export interface Settings {
   pomodoro?: Pomodoro
   countdownPosition?: Point
   pomodoroPosition?: Point
+  fullHeightWidgets?: true
 }
 
 export interface Shortcut { id: string; label: string; url: string }
@@ -65,9 +66,10 @@ export const MIN_WIDGET_SCALE = 60
 export const MAX_WIDGET_SCALE = 150
 export const colors = ['#f6efa9', '#f8d8dd', '#d4e6f6', '#d9edd4', '#e4ddf6', '#f8f5eb', '#303435'] as const
 
-export const defaultClockAppearance: WidgetAppearance = { x: 0, y: 0, color: '#faf9f1', scale: 100 }
+const DEFAULT_WIDGET_Y = .18
+export const defaultClockAppearance: WidgetAppearance = { x: 0, y: DEFAULT_WIDGET_Y, color: '#faf9f1', scale: 100 }
 export const defaultWeatherAppearance: WeatherAppearance = {
-  x: 1, y: 0, color: '#f8f8f0', scale: 100, backgroundColor: '#1a2620', opacity: 61,
+  x: 1, y: DEFAULT_WIDGET_Y, color: '#f8f8f0', scale: 100, backgroundColor: '#1a2620', opacity: 61,
 }
 export const defaultCountdownPosition: Point = { x: 0, y: 1 }
 export const defaultPomodoroPosition: Point = { x: .5, y: 1 }
@@ -79,6 +81,23 @@ export const defaults: Settings = {
   clockAppearance: defaultClockAppearance, weatherAppearance: defaultWeatherAppearance,
   showTimers: false, countdown: null, pomodoro: defaultPomodoro,
   countdownPosition: defaultCountdownPosition, pomodoroPosition: defaultPomodoroPosition,
+  fullHeightWidgets: true,
+}
+
+function expandWidgetPosition<T extends Point>(position?: T): T | undefined {
+  if (position) return { ...position, y: DEFAULT_WIDGET_Y + (1 - DEFAULT_WIDGET_Y) * position.y }
+}
+
+export function settingsForFullHeight(settings: Settings): Settings {
+  if (settings.fullHeightWidgets) return settings
+  return {
+    ...settings,
+    fullHeightWidgets: true,
+    clockAppearance: expandWidgetPosition(settings.clockAppearance),
+    weatherAppearance: expandWidgetPosition(settings.weatherAppearance),
+    countdownPosition: expandWidgetPosition(settings.countdownPosition),
+    pomodoroPosition: expandWidgetPosition(settings.pomodoroPosition),
+  }
 }
 
 export const defaultShortcuts: Shortcut[] = [

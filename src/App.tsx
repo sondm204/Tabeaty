@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Grid2X2, LoaderCircle, Image, Move, NotebookPen, Plus, Settings2, Timer } from 'lucide-react'
+import { AlertCircle, Check, Grid2X2, LoaderCircle, Image, Move, NotebookPen, Plus, Settings2 } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { IconButton } from './components/Controls'
 import { Note } from './components/Notes'
@@ -7,6 +7,7 @@ import type { Confirmation, SettingsSection, WidgetTarget } from './components/S
 import { Wallpaper, useWallpaper } from './components/Wallpaper'
 import { DashboardWidgets, ShortcutDock } from './components/Widgets'
 import { TimerWidgets } from './components/Timers'
+import { WorkspacePicker } from './components/WorkspacePicker'
 import { createNote, noteRect } from './model'
 import type { Rect, Size } from './model'
 import { snapNote, snapResize } from './snap'
@@ -15,15 +16,53 @@ import { arrangeNotes } from './note-grid'
 import { Board } from './services/board'
 import { SyncStorage, noteKey } from './services/storage'
 import type { Changes, StorageKey } from './services/storage'
+import { useWorkspaceDirectory } from './services/workspace-directory'
+import type { WorkspaceDirectory } from './services/workspace-directory'
+import { firstWorkspace, readWorkspaceSelection, rememberWorkspace, workspaceSlots } from './workspaces'
+import type { Workspace, WorkspaceSlot } from './workspaces'
 
-function createBoard() {
+function createBoards() {
   let journal: Storage | undefined
   try { journal = window.sessionStorage } catch { /* Tab-local recovery is optional. */ }
-  return new Board(new SyncStorage(chrome.storage.sync), journal)
+  return new Map(workspaceSlots.map((slot) => [slot, new Board(new SyncStorage(chrome.storage.sync, slot), journal)]))
 }
 
 export function App() {
-  const [board] = useState(createBoard)
+  const [boards] = useState(createBoards)
+  const [preferred, setPreferred] = useState(readWorkspaceSelection)
+  const directory = useWorkspaceDirectory()
+  const active = directory.workspaces.find((workspace) => workspace.slot === preferred) ?? firstWorkspace
+  const board = boards.get(active.slot)!
+
+  useEffect(() => {
+    const incoming = (changes: Changes, areaName: string) => {
+      if (areaName === 'sync') for (const board of boards.values()) board.receive(changes)
+    }
+    const flush = () => { for (const board of boards.values()) void board.flush() }
+    const hidden = () => { if (document.hidden) flush() }
+    chrome.storage.onChanged.addListener(incoming)
+    document.addEventListener('visibilitychange', hidden)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      document.removeEventListener('visibilitychange', hidden)
+      window.removeEventListener('pagehide', flush)
+      chrome.storage.onChanged.removeListener(incoming)
+      for (const board of boards.values()) board.stop()
+    }
+  }, [boards])
+
+  function select(slot: WorkspaceSlot) {
+    if (slot !== active.slot) void board.flush()
+    setPreferred(slot)
+    rememberWorkspace(slot)
+  }
+
+  return <Dashboard key={active.slot} board={board} workspace={active} directory={directory} selectWorkspace={select} />
+}
+
+function Dashboard({ board, workspace, directory, selectWorkspace }: {
+  board: Board; workspace: Workspace; directory: WorkspaceDirectory; selectWorkspace: (slot: WorkspaceSlot) => void
+}) {
   const state = useSyncExternalStore(board.subscribe, board.snapshot)
   const { images, loading, failed, refresh } = useWallpaper()
   const [section, setSection] = useState<SettingsSection | null>(null)
@@ -56,19 +95,7 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    const incoming = (changes: Changes, areaName: string) => { if (areaName === 'sync') board.receive(changes) }
-    const flush = () => { void board.flush() }
-    const hidden = () => { if (document.hidden) flush() }
-    chrome.storage.onChanged.addListener(incoming)
-    document.addEventListener('visibilitychange', hidden)
-    window.addEventListener('pagehide', flush)
     void board.load()
-    return () => {
-      document.removeEventListener('visibilitychange', hidden)
-      window.removeEventListener('pagehide', flush)
-      chrome.storage.onChanged.removeListener(incoming)
-      board.stop()
-    }
   }, [board])
 
   useEffect(() => {
@@ -157,7 +184,10 @@ export function App() {
   return <main className="dashboard">
     <Wallpaper images={images} overlay={state.settings.overlay} blur={state.settings.blur} animate={state.settings.animate} />
     <header className="topbar">
-      <div className="wordmark"><span className="brand-icon"><NotebookPen size={20} strokeWidth={1.9} /></span><span>NoteScape<span className="brand-dot">.</span></span></div>
+      <div className="topbar-start">
+        <div className="wordmark"><span className="brand-icon"><NotebookPen size={20} strokeWidth={1.9} /></span><span>NoteScape<span className="brand-dot">.</span></span></div>
+        <WorkspacePicker active={workspace} directory={directory} select={selectWorkspace} />
+      </div>
       <div className="top-actions">
         <button type="button" className="wallpaper-action glass" disabled={loading} onClick={refresh} aria-label="Đổi hình nền" title="Đổi hình nền">
           {loading ? <LoaderCircle size={17} className="spinner" /> : <Image size={17} />} <span>Đổi hình nền</span>
@@ -167,8 +197,6 @@ export function App() {
           onClick={arrange}><Grid2X2 size={17} /></IconButton>
         <IconButton className="settings-action glass" label="Chỉnh bố cục tiện ích" aria-pressed={editingWidgets}
           disabled={!state.ready} onClick={() => setEditingWidgets(!editingWidgets)}><Move size={17} /></IconButton>
-        <IconButton className="settings-action glass" label="Tiện ích hẹn giờ" aria-pressed={!!state.settings.showTimers}
-          disabled={!state.ready} onClick={() => board.updateSettings({ showTimers: !state.settings.showTimers })}><Timer size={18} /></IconButton>
         <IconButton className="settings-action glass" label="Cài đặt" disabled={!state.ready} onClick={() => setSection('appearance')}><Settings2 size={18} /></IconButton>
       </div>
     </header>

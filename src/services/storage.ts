@@ -1,5 +1,6 @@
 import { isNote, isSettings, isShortcuts, inRange, record } from './validation'
 import type { Settings, Shortcut, StickyNote } from '../model'
+import type { WorkspaceSlot } from '../workspaces'
 
 export type StorageKey = 'settings' | 'shortcuts' | `note:${string}`
 export type Content = Settings | Shortcut[] | StickyNote
@@ -40,13 +41,42 @@ export function compare(a: Entry, b: Entry) {
 }
 
 export class SyncStorage {
-  constructor(private readonly area: SyncArea) {}
+  private readonly prefix: string
+
+  constructor(private readonly area: SyncArea, slot: WorkspaceSlot = '1') {
+    // Workspace 1 keeps the original storage keys, so old notes need no copy or rewrite.
+    this.prefix = slot === '1' ? '' : `ws:${slot}:`
+  }
+
+  scopedKey(key: string) {
+    return this.prefix + key
+  }
+
+  private logicalKey(key: string) {
+    if (!key.startsWith(this.prefix)) return undefined
+    const logical = key.slice(this.prefix.length)
+    if (isKey(logical)) return logical
+  }
+
+  scopedChanges(changes: Changes): Changes {
+    const scoped: Changes = {}
+    for (const [key, change] of Object.entries(changes)) {
+      const logical = this.logicalKey(key)
+      if (logical) scoped[logical] = change
+    }
+    return scoped
+  }
+
+  bytes(key: string, entry: Entry) {
+    return itemBytes(this.scopedKey(key), entry)
+  }
 
   async read() {
     const entries = new Map<StorageKey, Entry>()
     let invalid = 0
-    for (const [key, value] of Object.entries(await this.area.get(null))) {
-      if (!isKey(key)) continue
+    for (const [storedKey, value] of Object.entries(await this.area.get(null))) {
+      const key = this.logicalKey(storedKey)
+      if (!key) continue
       const entry = decode(key, value)
       if (entry) entries.set(key, entry)
       else invalid++
@@ -55,11 +85,11 @@ export class SyncStorage {
   }
 
   delete(keys: string[]) {
-    return this.area.remove(keys)
+    return this.area.remove(keys.map((key) => this.scopedKey(key)))
   }
 
   async write(items: Record<string, Entry>) {
-    const entries = Object.entries(items)
+    const entries = Object.entries(items).map(([key, entry]) => [this.scopedKey(key), entry] as const)
     if (!entries.length) return
     if (entries.some(([key, entry]) => itemBytes(key, entry) > ITEM_LIMIT)) {
       throw new SyncQuotaError('Một mục vượt giới hạn khoảng 8 KB. Hãy xuất JSON hoặc rút ngắn nội dung rồi lưu lại.')
@@ -74,6 +104,6 @@ export class SyncStorage {
     if (projected > SOFT_TOTAL && projected >= total) {
       throw new SyncQuotaError('Dung lượng Chrome Sync gần đầy. Hãy sao lưu JSON và xóa bớt ghi chú để tiếp tục đồng bộ.')
     }
-    await this.area.set(items)
+    await this.area.set(Object.fromEntries(entries))
   }
 }
