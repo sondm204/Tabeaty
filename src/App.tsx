@@ -10,7 +10,7 @@ import { TimerWidgets } from './components/Timers'
 import { WorkspacePicker } from './components/WorkspacePicker'
 import { createNote, noteRect, widgetVisible } from './model'
 import type { Rect, Size } from './model'
-import { snapNote, snapResize } from './snap'
+import { snapPosition, snapResize, viewportCenter, viewportGuides } from './snap'
 import type { ResizeDirection, SnapGuides } from './snap'
 import { Board } from './services/board'
 import { SyncStorage, noteKey } from './services/storage'
@@ -63,6 +63,7 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
   board: Board; workspace: Workspace; directory: WorkspaceDirectory; selectWorkspace: (slot: WorkspaceSlot) => void
 }) {
   const state = useSyncExternalStore(board.subscribe, board.snapshot)
+  const showNotes = widgetVisible(state.settings, 'notes')
   const { images, loading, failed, refresh } = useWallpaper()
   const [section, setSection] = useState<SettingsSection | null>(null)
   const [widgetTarget, setWidgetTarget] = useState<WidgetTarget | null>(null)
@@ -119,10 +120,16 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
   }, [board])
 
   const findSnap = useCallback((id: string, rect: Rect, direction?: ResizeDirection) => {
+    const origin = canvas.current?.getBoundingClientRect()
+    if (!origin) return { rect, guides: {} }
+    const center = viewportCenter(origin)
     const neighbors = board.snapshot().notes.filter((note) => note.id !== id).map((note) => noteRect(note, area))
-    if (direction) return snapResize(rect, area, neighbors, direction)
-    const { position, guides } = snapNote(rect, rect, area, neighbors)
-    return { rect: { ...rect, ...position }, guides }
+    if (direction) {
+      const snapped = snapResize(rect, area, neighbors, direction, center)
+      return { rect: snapped.rect, guides: viewportGuides(snapped.guides, origin) }
+    }
+    const { position, guides } = snapPosition(rect, rect, area, neighbors, center)
+    return { rect: { ...rect, ...position }, guides: viewportGuides(guides, origin) }
   }, [area, board])
 
   const showGuides = useCallback((next: SnapGuides) => {
@@ -191,24 +198,25 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
     </header>
 
     <DashboardWidgets settings={state.settings} ready={state.ready} editCity={editWeather} editing={editingWidgets} update={board.updateSettings}
-      setVisibility={board.setWidgetVisibility} />
+      setVisibility={board.setWidgetVisibility} showGuides={showGuides} />
 
-    <div ref={canvas} className="canvas" role="region" aria-label="Bảng ghi chú">
-      {area.width > 0 && area.height > 0 && state.notes.map((note, index) => <Note key={note.id} note={note} area={area} layer={index + 1}
+    <div ref={canvas} className="canvas" role={showNotes ? 'region' : undefined} aria-label={showNotes ? 'Bảng ghi chú' : undefined}>
+      {showNotes && area.width > 0 && area.height > 0 && state.notes.map((note, index) => <Note key={note.id} note={note} area={area} layer={index + 1}
         focus={focus === note.id} conflict={state.conflicts.includes(noteKey(note.id))} update={board.updateNote}
         activate={activate} remove={remove} resolve={resolveNote} findSnap={findSnap} showGuides={showGuides} />)}
-      {(guides.x !== undefined || guides.y !== undefined) && <div className="snap-guides" aria-hidden="true">
-        {guides.x !== undefined && <div className="snap-guide snap-guide-x" style={{ left: guides.x }} />}
-        {guides.y !== undefined && <div className="snap-guide snap-guide-y" style={{ top: guides.y }} />}
-      </div>}
     </div>
 
     {(widgetVisible(state.settings, 'countdown') || widgetVisible(state.settings, 'pomodoro')) &&
       <TimerWidgets settings={state.settings} update={board.updateSettings} configure={editTimers} editing={editingWidgets}
-        setVisibility={board.setWidgetVisibility} />}
+        setVisibility={board.setWidgetVisibility} showGuides={showGuides} />}
     {state.ready && widgetVisible(state.settings, 'shortcuts') &&
       <ShortcutWidget shortcuts={state.shortcuts} position={state.settings.shortcutPosition} edit={editShortcuts}
-        editing={editingWidgets} update={board.updateSettings} setVisibility={board.setWidgetVisibility} />}
+        editing={editingWidgets} update={board.updateSettings} setVisibility={board.setWidgetVisibility} showGuides={showGuides} />}
+
+    {(guides.x !== undefined || guides.y !== undefined) && <div className="snap-guides" aria-hidden="true">
+      {guides.x !== undefined && <div className="snap-guide snap-guide-x" style={{ left: guides.x }} />}
+      {guides.y !== undefined && <div className="snap-guide snap-guide-y" style={{ top: guides.y }} />}
+    </div>}
 
     {(state.error || state.conflicts.length > 0 || failed) && <div className="notifications">
       {state.error && <div className="notice glass" role="alert">
@@ -223,9 +231,9 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
       {failed && <div className="notice glass" role="status"><Image size={17} /><div>Chưa tải được hình nền.<div className="notice-actions"><button type="button" onClick={refresh}>Thử lại</button></div></div></div>}
     </div>}
 
-    <footer className="bottom-bar">
+    {showNotes && <footer className="bottom-bar">
       <button type="button" className="add-note" disabled={!state.ready} onClick={addNote}><Plus size={20} /><span>Ghi chú mới</span></button>
-    </footer>
+    </footer>}
 
     <SettingsPanel section={section} close={() => selectSettings(null)} select={selectSettings} board={board} state={state} confirm={setConfirmation}
       widgetTarget={widgetTarget} showConflicts={showConflicts} editWidgetLayout={() => { selectSettings(null); setEditingWidgets(true) }} />

@@ -39,7 +39,7 @@ export interface ScalablePosition extends Point {
   scale?: number
 }
 
-export const widgetIds = ['clock', 'weather', 'countdown', 'pomodoro', 'shortcuts'] as const
+export const widgetIds = ['clock', 'weather', 'countdown', 'pomodoro', 'shortcuts', 'notes'] as const
 export type WidgetId = typeof widgetIds[number]
 export type ClockDisplay = 'date-time' | 'time' | 'date'
 

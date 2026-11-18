@@ -4,7 +4,7 @@ NoteScape thay trang Tab mới của Chromium bằng bảng ghi chú nổi, đ�
 
 - **Workspace**. Mở menu cạnh logo để tạo, đổi tên và chuyển giữa tối đa ba workspace. Mỗi workspace có ghi chú, lối tắt, cài đặt và bố cục riêng. Dữ liệu của bản cũ nằm trong **Workspace 1**. Tab mới mở workspace bạn chọn gần nhất trên trình duyệt này.
 - **Bố cục tiện ích**. Bật **Chỉnh bố cục tiện ích** để kéo từng thẻ Ngày giờ, Thời tiết, Countdown, Pomodoro và Lối tắt. Kéo góc để đổi kích thước hoặc bấm thùng rác trên thẻ để ẩn. Trong **Cài đặt → Tiện ích**, dùng checkbox trên tiêu đề để bật tắt từng widget và mở từng mục để chỉnh thêm. Mục **Ngày giờ** có chế độ ngày và giờ, chỉ giờ hoặc chỉ ngày. Mục **Ghi chú** cũng nằm tại đây.
-- **Căn ghi chú**. Giữ **Shift** khi kéo ghi chú hoặc kéo tay nắm đổi kích thước để căn theo cạnh hoặc tâm. Thả chuột khi đường dóng hiện để lưu kết quả.
+- **Ghi chú và căn chỉnh**. Checkbox **Hiện ghi chú** trong **Cài đặt → Tiện ích** bật tắt bảng ghi chú và nút tạo ghi chú. Giữ **Shift** khi kéo ghi chú hoặc widget để căn tâm theo chiều ngang hoặc dọc của vùng hiển thị trình duyệt. Ghi chú cũng căn theo cạnh hoặc tâm của ghi chú khác khi kéo hoặc đổi kích thước. Thả chuột khi đường dóng hiện để lưu kết quả.
 - **Ghi chú định dạng**. Bấm nút **Bật định dạng ghi chú** (biểu tượng chữ T) để mở trình soạn thảo với chữ đậm, nghiêng, danh sách gạch đầu dòng, danh sách đánh số và checklist có thể đánh dấu. Nội dung văn bản hiện tại được chuyển sang trình soạn thảo. Dữ liệu định dạng dùng chung hạn mức lưu trữ với nội dung.
 - **Hẹn giờ**. Trong **Cài đặt → Tiện ích**, mở **Countdown** để bật thẻ và thêm tối đa ba mốc. Mở **Pomodoro** để bật riêng thẻ và đặt độ dài phiên tập trung/nghỉ. Pomodoro có nút bắt đầu, tạm dừng, tiếp tục, đặt lại và chuyển phiên. Khi hết giờ, bấm nút bắt đầu phiên kế tiếp. Đồng hồ dựa trên mốc thời gian đã lưu để tính thời gian còn lại khi mở lại tab.
 
@@ -75,6 +75,7 @@ Extension chỉ khai báo quyền `storage` và quyền truy cập hai máy ch�
 - [ ] Đổi ảnh bằng tay, đợi khoảng 5 phút rồi thử đưa tab xuống nền và quay lại sau khi quá hạn. Thử khi mất mạng để kiểm tra ảnh hiện tại hoặc nền chuyển sắc.
 - [ ] Đổi thành phố, kiểm tra nhiệt độ, độ ẩm và ba ngày dự báo. Tắt rồi bật lại widget, thử **Tải lại thời tiết** nếu kết nối bị gián đoạn.
 - [ ] Trong **Cài đặt → Tiện ích**, mở và thu gọn từng mục, bật tắt từng widget và đổi màu. Kéo thẻ, đổi kích thước từ góc và thử ẩn bằng thùng rác. Tải lại để kiểm tra cài đặt đã lưu.
+- [ ] Tắt rồi bật lại **Hiện ghi chú**, sau đó giữ Shift khi kéo ghi chú và widget đến gần tâm cửa sổ. Đối chiếu vị trí với đường dóng ngang và dọc.
 - [ ] Thêm ba mốc Countdown, sửa hoặc xóa một mốc, rồi thử ẩn và bật lại thẻ. Bắt đầu, tạm dừng và tiếp tục Pomodoro, sau đó kiểm tra thời gian còn lại khi tải lại tab.
 - [ ] Tạo hai workspace mới, thử đổi tên và xác nhận giới hạn ba workspace. Chuyển qua lại khi có ghi chú và cài đặt khác nhau, rồi tải lại tab.
 - [ ] Thêm, sửa, đổi thứ tự, xóa và bấm mở lối tắt. Thử URL có giao thức không được hỗ trợ.

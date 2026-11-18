@@ -284,8 +284,8 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
           <WidgetGroup title="Pomodoro" toggle={visibility('pomodoro', 'Pomodoro')}>
             <PomodoroSettings settings={settings} update={update} />
           </WidgetGroup>
-          <WidgetGroup title="Ghi chú">
-            <p className="form-hint">Giữ Shift khi kéo ghi chú hoặc kéo cạnh để căn theo đường dóng.</p>
+          <WidgetGroup title="Ghi chú" toggle={visibility('notes', 'ghi chú')}>
+            <p className="form-hint">Giữ Shift khi kéo ghi chú hoặc kéo cạnh để căn theo ghi chú khác hay tâm màn hình.</p>
             <ColorField label="Màu ghi chú mặc định" value={settings.defaultColor} onChange={(defaultColor) => update({ defaultColor })} />
             <RangeField label="Độ đậm nền ghi chú" value={settings.defaultOpacity} min={0} max={100} unit="%" onChange={(defaultOpacity) => update({ defaultOpacity })} />
             <RangeField label="Chiều rộng ghi chú mới" value={settings.width} min={MIN_WIDTH} max={MAX_WIDTH} unit=" px" onChange={(width) => update({ width })} />

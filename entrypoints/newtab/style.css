@@ -133,7 +133,7 @@
 .attribution a:hover { text-decoration: underline; }
 
 .canvas { position: absolute; z-index: 2; inset: 85px max(12px, calc(var(--side) - 14px)) 116px; pointer-events: none; }
-.snap-guides { position: absolute; inset: 0; z-index: 513; pointer-events: none; }
+.snap-guides { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
 .snap-guide { position: absolute; background: #9efaff; box-shadow: 0 0 0 1px #172a32a0; }
 .snap-guide-x { top: 0; bottom: 0; width: 1px; }
 .snap-guide-y { left: 0; right: 0; height: 1px; }

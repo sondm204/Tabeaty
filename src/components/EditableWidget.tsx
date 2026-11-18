@@ -1,8 +1,10 @@
 import { Grip, MoveDiagonal, MoveDiagonal2, Trash2 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'react'
 import { clamp, MAX_WIDGET_SCALE, MIN_WIDGET_SCALE, relativePoint } from '../model'
 import type { Point, Rect, Size, WidgetAppearance } from '../model'
+import { snapPosition, viewportCenter, viewportGuides } from '../snap'
+import type { SnapGuides } from '../snap'
 
 type WidgetLayout = Point & Partial<Pick<WidgetAppearance, 'color' | 'scale'>>
 const arrowDirections: Record<string, Point> = {
@@ -14,18 +16,39 @@ interface Gesture {
   pointer: number
   start: Point
   rect: Rect
+  origin: Point
   area: Size
   appearance: WidgetLayout
   resize: boolean
   leftHandle: boolean
+  last?: Point
 }
 
-export function EditableWidget({ label, appearance, editing, update, hide, style, children }: {
+function change(active: Gesture, pointer: Point, shift: boolean) {
+  const dx = pointer.x - active.start.x
+  const dy = pointer.y - active.start.y
+  if (active.resize) {
+    // Project the pointer movement onto the original diagonal to scale both axes.
+    const { width, height } = active.rect
+    const distance = (dx * width * (active.leftHandle ? -1 : 1) + dy * height) / (width ** 2 + height ** 2)
+    const scale = active.appearance.scale ?? 100
+    return { patch: { scale: clamp(Math.round(scale * (1 + distance)), MIN_WIDGET_SCALE, MAX_WIDGET_SCALE) }, guides: {} }
+  }
+  const point = { x: active.rect.x + dx, y: active.rect.y + dy }
+  const snapped = shift && snapPosition(point, active.rect, active.area, [], viewportCenter(active.origin))
+  return {
+    patch: relativePoint(snapped ? snapped.position : point, active.rect, active.area, active.appearance),
+    guides: snapped ? viewportGuides(snapped.guides, active.origin) : {},
+  }
+}
+
+export function EditableWidget({ label, appearance, editing, update, hide, showGuides, style, children }: {
   label: string
   appearance: WidgetLayout
   editing: boolean
   update: (patch: Partial<WidgetAppearance>) => void
   hide: () => void
+  showGuides: (guides: SnapGuides) => void
   style?: CSSProperties
   children: ReactNode
 }) {
@@ -34,6 +57,36 @@ export function EditableWidget({ label, appearance, editing, update, hide, style
   const [draft, setDraft] = useState<Partial<WidgetAppearance>>()
   const layout = editing ? { ...appearance, ...draft } : appearance
   const leftHandle = draft ? gesture.current?.leftHandle : layout.x >= .5
+
+  useEffect(() => {
+    if (!editing) return
+    function previewShift(event: globalThis.KeyboardEvent) {
+      const active = gesture.current
+      if (event.key !== 'Shift' || !active?.last || active.resize) return
+      const { patch, guides } = change(active, active.last, event.shiftKey)
+      setDraft(patch)
+      showGuides(guides)
+    }
+    function clearShift() {
+      const active = gesture.current
+      if (active?.last && !active.resize) {
+        setDraft(change(active, active.last, false).patch)
+        showGuides({})
+      }
+    }
+    window.addEventListener('keydown', previewShift)
+    window.addEventListener('keyup', previewShift)
+    window.addEventListener('blur', clearShift)
+    return () => {
+      window.removeEventListener('keydown', previewShift)
+      window.removeEventListener('keyup', previewShift)
+      window.removeEventListener('blur', clearShift)
+      if (!gesture.current) return
+      gesture.current = null
+      setDraft(undefined)
+      showGuides({})
+    }
+  }, [editing, showGuides])
 
   function start(event: PointerEvent<HTMLButtonElement>, resize: boolean) {
     const widget = wrapper.current
@@ -45,6 +98,7 @@ export function EditableWidget({ label, appearance, editing, update, hide, style
     gesture.current = {
       pointer: event.pointerId,
       start: { x: event.clientX, y: event.clientY },
+      origin: { x: frame.x, y: frame.y },
       rect: { x: x - frame.x, y: y - frame.y, width, height },
       area: { width: frame.width, height: frame.height },
       appearance,
@@ -53,27 +107,13 @@ export function EditableWidget({ label, appearance, editing, update, hide, style
     }
   }
 
-  function change(event: PointerEvent<HTMLButtonElement>) {
+  function stop(event: PointerEvent<HTMLButtonElement>, commit: boolean) {
     const active = gesture.current
     if (active?.pointer !== event.pointerId) return
-    const dx = event.clientX - active.start.x
-    const dy = event.clientY - active.start.y
-    if (active.resize) {
-      // Project the pointer movement onto the original diagonal to scale both axes.
-      const { width, height } = active.rect
-      const distance = (dx * width * (active.leftHandle ? -1 : 1) + dy * height) / (width ** 2 + height ** 2)
-      const scale = active.appearance.scale ?? 100
-      return { scale: clamp(Math.round(scale * (1 + distance)), MIN_WIDGET_SCALE, MAX_WIDGET_SCALE) }
-    }
-    return relativePoint({ x: active.rect.x + dx, y: active.rect.y + dy }, active.rect, active.area, active.appearance)
-  }
-
-  function stop(event: PointerEvent<HTMLButtonElement>, commit: boolean) {
-    if (gesture.current?.pointer !== event.pointerId) return
-    const patch = commit ? change(event) : undefined
     gesture.current = null
     setDraft(undefined)
-    if (patch) update(patch)
+    showGuides({})
+    if (commit && active.last) update(change(active, { x: event.clientX, y: event.clientY }, event.shiftKey).patch)
   }
 
   function step(event: KeyboardEvent<HTMLButtonElement>, resize: boolean) {
@@ -98,8 +138,12 @@ export function EditableWidget({ label, appearance, editing, update, hide, style
 
   const handles = {
     onPointerMove: (event: PointerEvent<HTMLButtonElement>) => {
-      const patch = change(event)
-      if (patch) setDraft(patch)
+      const active = gesture.current
+      if (active?.pointer !== event.pointerId) return
+      active.last = { x: event.clientX, y: event.clientY }
+      const { patch, guides } = change(active, active.last, event.shiftKey)
+      setDraft(patch)
+      showGuides(guides)
     },
     onPointerUp: (event: PointerEvent<HTMLButtonElement>) => stop(event, true),
     onPointerCancel: (event: PointerEvent<HTMLButtonElement>) => stop(event, false),

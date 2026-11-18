@@ -8,6 +8,7 @@ import { defaultClockAppearance, defaultShortcutPosition, defaultWeatherAppearan
 import type { City, ClockDisplay, ScalablePosition, Settings, Shortcut, WidgetId } from '../model'
 import type { Weather } from '../services/weather'
 import { useWeather } from '../use-weather'
+import type { SnapGuides } from '../snap'
 import { EditableWidget } from './EditableWidget'
 
 const timeFormat = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
@@ -15,9 +16,10 @@ const dayFormat = new Intl.DateTimeFormat('vi-VN', { weekday: 'long' })
 const dateFormat = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const forecastDay = new Intl.DateTimeFormat('vi-VN', { weekday: 'short', timeZone: 'UTC' })
 
-export const DashboardWidgets = memo(function DashboardWidgets({ settings, ready, editCity, editing, update, setVisibility }: {
+export const DashboardWidgets = memo(function DashboardWidgets({ settings, ready, editCity, editing, update, setVisibility, showGuides }: {
   settings: Settings; ready: boolean; editCity: () => void; editing: boolean; update: (patch: Partial<Settings>) => void
   setVisibility: (widget: WidgetId, visible: boolean) => void
+  showGuides: (guides: SnapGuides) => void
 }) {
   const clock = settings.clockAppearance ?? defaultClockAppearance
   const weather = settings.weatherAppearance ?? defaultWeatherAppearance
@@ -28,10 +30,10 @@ export const DashboardWidgets = memo(function DashboardWidgets({ settings, ready
     '--weather-opacity': `${weather.opacity}%`,
   } as CSSProperties
   return <div className={`widgets${editing ? ' widgets-editing' : ''}`}>
-    {widgetVisible(settings, 'clock') && <EditableWidget label="ngày giờ" appearance={clock} editing={editing}
+    {widgetVisible(settings, 'clock') && <EditableWidget label="ngày giờ" appearance={clock} editing={editing} showGuides={showGuides}
       hide={() => setVisibility('clock', false)}
       update={(patch) => update({ clockAppearance: { ...clock, ...patch } })}><Clock display={settings.clockDisplay ?? 'date-time'} /></EditableWidget>}
-    {showWeather && <EditableWidget label="thời tiết" appearance={weather} editing={editing} style={weatherStyle}
+    {showWeather && <EditableWidget label="thời tiết" appearance={weather} editing={editing} showGuides={showGuides} style={weatherStyle}
       hide={() => setVisibility('weather', false)}
       update={(patch) => update({ weatherAppearance: { ...weather, ...patch } })}>
       <WeatherWidget city={settings.city} editCity={editCity} {...forecast} />
@@ -135,13 +137,14 @@ function ShortcutDock({ shortcuts, edit }: { shortcuts: Shortcut[]; edit: () => 
   </nav>
 }
 
-export const ShortcutWidget = memo(function ShortcutWidget({ shortcuts, position, edit, editing, update, setVisibility }: {
+export const ShortcutWidget = memo(function ShortcutWidget({ shortcuts, position, edit, editing, update, setVisibility, showGuides }: {
   shortcuts: Shortcut[]; position?: ScalablePosition; edit: () => void; editing: boolean
   update: (patch: Partial<Settings>) => void; setVisibility: (widget: WidgetId, visible: boolean) => void
+  showGuides: (guides: SnapGuides) => void
 }) {
   const layout = { ...defaultShortcutPosition, ...position }
   return <div className="widgets shortcut-widgets">
-    <EditableWidget label="lối tắt" appearance={layout} editing={editing}
+    <EditableWidget label="lối tắt" appearance={layout} editing={editing} showGuides={showGuides}
       hide={() => setVisibility('shortcuts', false)}
       update={({ x = layout.x, y = layout.y, scale = layout.scale }) => update({ shortcutPosition: { x, y, scale } })}>
       <ShortcutDock shortcuts={shortcuts} edit={edit} />

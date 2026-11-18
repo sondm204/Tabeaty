@@ -124,3 +124,12 @@ it('hiện lối tắt với cấu hình cũ và giữ bố cục riêng khi ẩ
   expect(widgetVisible({ ...restored, widgetVisibility: { shortcuts: true } }, 'shortcuts')).toBe(true)
   expect(isSettings({ ...settings, shortcutPosition: { ...settings.shortcutPosition, scale: 200 } })).toBe(false)
 })
+
+it('ẩn và bật lại bảng ghi chú mà không mất dữ liệu sao lưu', () => {
+  const saved = { settings: { ...defaults, widgetVisibility: { notes: false } }, notes: [note('existing', 1)], shortcuts: [] }
+  expect(widgetVisible(defaults, 'notes')).toBe(true)
+  const restored = parseBackup(serializeBackup(saved))
+  expect(restored.notes).toEqual(saved.notes)
+  expect(widgetVisible(restored.settings, 'notes')).toBe(false)
+  expect(widgetVisible({ ...restored.settings, widgetVisibility: { notes: true } }, 'notes')).toBe(true)
+})

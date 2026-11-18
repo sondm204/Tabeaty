@@ -8,13 +8,15 @@ import {
   resetPomodoro, saveCountdown, timerParts, togglePomodoro,
 } from '../timers'
 import { IconButton, RangeField } from './Controls'
+import type { SnapGuides } from '../snap'
 import { EditableWidget } from './EditableWidget'
 
 const eventDate = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
 
-export function TimerWidgets({ settings, update, configure, editing, setVisibility }: {
+export function TimerWidgets({ settings, update, configure, editing, setVisibility, showGuides }: {
   settings: Settings; update: (patch: Partial<Settings>) => void; configure: () => void; editing: boolean
   setVisibility: (widget: WidgetId, visible: boolean) => void
+  showGuides: (guides: SnapGuides) => void
 }) {
   const [now, setNow] = useState(Date.now)
   const timer = settings.pomodoro ?? defaultPomodoro
@@ -46,7 +48,7 @@ export function TimerWidgets({ settings, update, configure, editing, setVisibili
   const countdownPosition = { ...defaultCountdownPosition, ...settings.countdownPosition }
   const pomodoroPosition = { ...defaultPomodoroPosition, ...settings.pomodoroPosition }
   return <aside className="widgets timer-widgets" aria-label="Tiện ích hẹn giờ">
-    {showCountdown && <EditableWidget label="Countdown" appearance={countdownPosition} editing={editing}
+    {showCountdown && <EditableWidget label="Countdown" appearance={countdownPosition} editing={editing} showGuides={showGuides}
       hide={() => setVisibility('countdown', false)}
       update={({ x = countdownPosition.x, y = countdownPosition.y, scale = countdownPosition.scale }) => update({ countdownPosition: { x, y, scale } })}>
       <section className="timer-card glass" aria-label="Countdown">
@@ -69,7 +71,7 @@ export function TimerWidgets({ settings, update, configure, editing, setVisibili
         </div>
       </section>
     </EditableWidget>}
-    {showPomodoro && <EditableWidget label="Pomodoro" appearance={pomodoroPosition} editing={editing}
+    {showPomodoro && <EditableWidget label="Pomodoro" appearance={pomodoroPosition} editing={editing} showGuides={showGuides}
       hide={() => setVisibility('pomodoro', false)}
       update={({ x = pomodoroPosition.x, y = pomodoroPosition.y, scale = pomodoroPosition.scale }) => update({ pomodoroPosition: { x, y, scale } })}>
       <section className="timer-card glass" aria-label="Pomodoro">
