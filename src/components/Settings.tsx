@@ -1,25 +1,24 @@
-import { ArrowDown, ArrowUp, Download, Globe2, LayoutGrid, Link2, MapPin, Move, NotebookPen, Plus, Search, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, Download, Globe2, LayoutGrid, MapPin, Move, Plus, Search, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
+import type { FormEvent, ReactNode, Ref } from 'react'
 import {
   defaultClockAppearance, defaultWeatherAppearance, defaults, MAX_HEIGHT, MAX_SHORTCUTS,
-  MAX_WIDGET_SCALE, MAX_WIDTH, MIN_HEIGHT, MIN_WIDGET_SCALE, MIN_WIDTH,
+  MAX_WIDTH, MIN_HEIGHT, MIN_WIDTH, widgetVisible,
 } from '../model'
-import type { City, Shortcut, WidgetAppearance } from '../model'
+import type { City, Shortcut, WidgetId } from '../model'
 import { parseBackup, serializeBackup } from '../services/backup'
 import type { Backup } from '../services/backup'
 import type { Board } from '../services/board'
 import { normalizeUrl } from '../services/validation'
 import { searchCities } from '../services/weather'
-import { IconButton, PositionFields, RangeField } from './Controls'
-import { TimerSettings } from './Timers'
+import { IconButton, RangeField } from './Controls'
+import { CountdownSettings, PomodoroSettings } from './Timers'
 
 const sections = [
-  ['appearance', 'Giao diện', SlidersHorizontal], ['widgets', 'Tiện ích', LayoutGrid], ['notes', 'Ghi chú', NotebookPen],
-  ['shortcuts', 'Lối tắt', Link2], ['general', 'Đồng bộ', Globe2],
+  ['appearance', 'Giao diện', SlidersHorizontal], ['widgets', 'Tiện ích', LayoutGrid], ['general', 'Đồng bộ', Globe2],
 ] as const
 export type SettingsSection = (typeof sections)[number][0]
-export type WidgetTarget = 'weather' | 'countdown'
+export type WidgetTarget = 'weather' | 'countdown' | 'shortcuts'
 export interface Confirmation { title: string; text: string; action: string; run: () => void; destructive?: boolean; alternate?: { label: string; run: () => void } }
 
 export function Modal({ open, close, children, label, className }: {
@@ -167,15 +166,11 @@ function ColorField({ label, value, onChange }: {
   </label>
 }
 
-function WidgetFields({ appearance, update }: {
-  appearance: WidgetAppearance; update: (patch: Partial<WidgetAppearance>) => void
-}) {
-  return <>
-    <ColorField label="Màu chữ" value={appearance.color} onChange={(color) => update({ color })} />
-    <RangeField label="Kích thước" value={appearance.scale} min={MIN_WIDGET_SCALE} max={MAX_WIDGET_SCALE}
-      unit="%" onChange={(scale) => update({ scale })} />
-    <PositionFields position={appearance} update={update} />
-  </>
+function WidgetGroup({ title, target, children }: { title: string; target?: Ref<HTMLDetailsElement>; children: ReactNode }) {
+  return <details className="widget-settings" ref={target}>
+    <summary>{title}<ChevronDown aria-hidden="true" size={16} /></summary>
+    <div className="widget-settings-content">{children}</div>
+  </details>
 }
 
 export function SettingsPanel({ section, close, select, board, state, confirm, showConflicts, editWidgetLayout, widgetTarget }: {
@@ -192,13 +187,23 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
   const { settings, shortcuts, notes } = state
   const [fileError, setFileError] = useState('')
   const file = useRef<HTMLInputElement>(null)
-  const target = useRef<HTMLFieldSetElement>(null)
+  const target = useRef<HTMLDetailsElement>(null)
   const update = board.updateSettings
   const clock = settings.clockAppearance ?? defaultClockAppearance
   const weather = settings.weatherAppearance ?? defaultWeatherAppearance
   useEffect(() => {
-    if (section === 'widgets' && widgetTarget) target.current?.scrollIntoView({ block: 'start' })
+    const details = target.current
+    if (section !== 'widgets' || !widgetTarget || !details) return
+    details.open = true
+    details.scrollIntoView({ block: 'start' })
   }, [section, widgetTarget])
+
+  function visibility(widget: WidgetId, label: string) {
+    return <label className="toggle-field widget-visibility">Hiện {label}
+      <input type="checkbox" checked={widgetVisible(settings, widget)}
+        onChange={(event) => board.setWidgetVisibility(widget, event.target.checked)} />
+    </label>
+  }
 
   async function readBackup(input: HTMLInputElement) {
     const selected = input.files?.[0]
@@ -230,48 +235,55 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
           <RangeField label="Lớp phủ tối" value={settings.overlay} min={0} max={75} unit="%" onChange={(overlay) => update({ overlay })} />
           <RangeField label="Độ mờ hình nền" value={settings.blur} min={0} max={16} unit=" px" onChange={(blur) => update({ blur })} />
           <label className="toggle-field">Hiệu ứng chuyển hình nền<input type="checkbox" role="switch" checked={settings.animate} onChange={(event) => update({ animate: event.target.checked })} /></label>
-          <label className="toggle-field">Màu ghi chú mặc định<input type="color" value={settings.defaultColor} onChange={(event) => update({ defaultColor: event.target.value })} /></label>
-          <RangeField label="Độ đậm nền ghi chú" value={settings.defaultOpacity} min={0} max={100} unit="%" onChange={(defaultOpacity) => update({ defaultOpacity })} />
         </div>}
         {section === 'widgets' && <div className="section-stack">
           <button className="secondary-button" type="button" onClick={editWidgetLayout}><Move size={16} /> Kéo thả tiện ích trên bảng</button>
-          <fieldset className="widget-settings">
-            <legend>Ngày giờ</legend>
-            <WidgetFields appearance={clock} update={(patch) => update({ clockAppearance: { ...clock, ...patch } })} />
-            <button type="button" className="secondary-button" onClick={() => update({ clockAppearance: defaultClockAppearance })}>Đặt lại ngày giờ</button>
-          </fieldset>
-          <fieldset className="widget-settings" ref={widgetTarget === 'weather' ? target : undefined}>
-            <legend>Thời tiết</legend>
+          <WidgetGroup title="Ngày giờ">
+            {visibility('clock', 'ngày giờ')}
+            <ColorField label="Màu chữ" value={clock.color} onChange={(color) => update({ clockAppearance: { ...clock, color } })} />
+          </WidgetGroup>
+          <WidgetGroup title="Thời tiết" target={widgetTarget === 'weather' ? target : undefined}>
+            {visibility('weather', 'thời tiết')}
             <CityForm city={settings.city} select={(city) => update({ city })} />
-            <WidgetFields appearance={weather} update={(patch) => update({ weatherAppearance: { ...weather, ...patch } })} />
+            <ColorField label="Màu chữ" value={weather.color} onChange={(color) => update({ weatherAppearance: { ...weather, color } })} />
             <ColorField label="Màu nền" value={weather.backgroundColor}
               onChange={(backgroundColor) => update({ weatherAppearance: { ...weather, backgroundColor } })} />
             <RangeField label="Độ đậm nền" value={weather.opacity} min={0} max={100} unit="%"
               onChange={(opacity) => update({ weatherAppearance: { ...weather, opacity } })} />
-            <button type="button" className="secondary-button" onClick={() => update({ weatherAppearance: defaultWeatherAppearance })}>Đặt lại giao diện thời tiết</button>
-          </fieldset>
-          <TimerSettings settings={settings} update={update} countdownRef={widgetTarget === 'countdown' ? target : undefined} />
+          </WidgetGroup>
+          <WidgetGroup title="Countdown" target={widgetTarget === 'countdown' ? target : undefined}>
+            {visibility('countdown', 'Countdown')}
+            <CountdownSettings settings={settings} update={update} startAdding={widgetTarget === 'countdown'} />
+          </WidgetGroup>
+          <WidgetGroup title="Pomodoro">
+            {visibility('pomodoro', 'Pomodoro')}
+            <PomodoroSettings settings={settings} update={update} />
+          </WidgetGroup>
+          <WidgetGroup title="Ghi chú">
+            <p className="form-hint">Giữ Shift khi kéo ghi chú hoặc kéo cạnh để căn theo đường dóng.</p>
+            <ColorField label="Màu ghi chú mặc định" value={settings.defaultColor} onChange={(defaultColor) => update({ defaultColor })} />
+            <RangeField label="Độ đậm nền ghi chú" value={settings.defaultOpacity} min={0} max={100} unit="%" onChange={(defaultOpacity) => update({ defaultOpacity })} />
+            <RangeField label="Chiều rộng ghi chú mới" value={settings.width} min={MIN_WIDTH} max={MAX_WIDTH} unit=" px" onChange={(width) => update({ width })} />
+            <RangeField label="Chiều cao ghi chú mới" value={settings.height} min={MIN_HEIGHT} max={MAX_HEIGHT} unit=" px" onChange={(height) => update({ height })} />
+            <RangeField label="Cỡ chữ mặc định" value={settings.fontSize} min={12} max={28} unit=" px" onChange={(fontSize) => update({ fontSize })} />
+            <div className="button-row">
+              <button type="button" className="secondary-button" onClick={() => exportBackup({ notes, settings, shortcuts })}><Download size={17} /> Xuất JSON</button>
+              <button type="button" className="secondary-button" onClick={() => file.current?.click()}><Upload size={17} /> Nhập JSON</button>
+              <input type="file" ref={file} accept=".json,application/json" hidden onChange={(event) => { void readBackup(event.currentTarget) }} />
+            </div>
+            {fileError && <p role="alert" className="form-error">{fileError}</p>}
+          </WidgetGroup>
+          <WidgetGroup title="Lối tắt" target={widgetTarget === 'shortcuts' ? target : undefined}>
+            <ShortcutForm shortcuts={shortcuts} save={board.setShortcuts} />
+          </WidgetGroup>
         </div>}
-        {section === 'notes' && <div className="section-stack">
-          <p className="form-hint">Giữ Shift khi kéo ghi chú hoặc kéo cạnh để căn theo đường dóng.</p>
-          <RangeField label="Chiều rộng mặc định" value={settings.width} min={MIN_WIDTH} max={MAX_WIDTH} unit=" px" onChange={(width) => update({ width })} />
-          <RangeField label="Chiều cao mặc định" value={settings.height} min={MIN_HEIGHT} max={MAX_HEIGHT} unit=" px" onChange={(height) => update({ height })} />
-          <RangeField label="Cỡ chữ mặc định" value={settings.fontSize} min={12} max={28} unit=" px" onChange={(fontSize) => update({ fontSize })} />
-          <div className="button-row">
-            <button type="button" className="secondary-button" onClick={() => exportBackup({ notes, settings, shortcuts })}><Download size={17} /> Xuất JSON</button>
-            <button type="button" className="secondary-button" onClick={() => file.current?.click()}><Upload size={17} /> Nhập JSON</button>
-            <input type="file" ref={file} accept=".json,application/json" hidden onChange={(event) => { void readBackup(event.currentTarget) }} />
-          </div>
-          {fileError && <p role="alert" className="form-error">{fileError}</p>}
-        </div>}
-        {section === 'shortcuts' && <ShortcutForm shortcuts={shortcuts} save={board.setShortcuts} />}
         {section === 'general' && <div className="section-stack">
           <p className="form-hint">Cài NoteScape trên cả hai máy, dùng cùng hệ trình duyệt và cùng tài khoản, rồi bật đồng bộ dữ liệu tiện ích. Chrome và Edge có hệ đồng bộ riêng.</p>
           <p className="form-hint">Trạng thái lưu chỉ phản ánh dữ liệu trên trình duyệt hiện tại. Trình duyệt sẽ chuyển thay đổi đến các thiết bị theo lịch đồng bộ của nó.</p>
           {state.conflicts.length > 0 && <button type="button" className="secondary-button" onClick={showConflicts}>Xem thay đổi cần xử lý</button>}
           <button type="button" className="secondary-button" onClick={() => confirm({
             title: 'Khôi phục cài đặt?',
-            text: 'Giao diện và thành phố thời tiết sẽ trở về mặc định. Ghi chú và lối tắt của bạn được giữ lại.',
+            text: 'Giao diện và tiện ích của workspace sẽ trở về mặc định. Các mốc Countdown sẽ bị xóa.',
             action: 'Khôi phục', run: () => update(defaults),
           })}>Khôi phục cài đặt mặc định</button>
           <p className="settings-version">NoteScape {chrome.runtime.getManifest().version}</p>

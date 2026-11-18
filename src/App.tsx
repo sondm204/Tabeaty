@@ -8,7 +8,7 @@ import { Wallpaper, useWallpaper } from './components/Wallpaper'
 import { DashboardWidgets, ShortcutDock } from './components/Widgets'
 import { TimerWidgets } from './components/Timers'
 import { WorkspacePicker } from './components/WorkspacePicker'
-import { createNote, noteRect } from './model'
+import { createNote, noteRect, widgetVisible } from './model'
 import type { Rect, Size } from './model'
 import { snapNote, snapResize } from './snap'
 import type { ResizeDirection, SnapGuides } from './snap'
@@ -174,7 +174,11 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
     setWidgetTarget(null)
     setSection(next)
   }
-  const editShortcuts = useCallback(() => { if (state.ready) setSection('shortcuts') }, [state.ready])
+  const editShortcuts = useCallback(() => {
+    if (!state.ready) return
+    setWidgetTarget('shortcuts')
+    setSection('widgets')
+  }, [state.ready])
   const showConflicts = () => { if (state.conflicts[0]) resolve(state.conflicts[0]) }
   const run = (action: () => void) => {
     setConfirmation(null)
@@ -201,7 +205,8 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
       </div>
     </header>
 
-    <DashboardWidgets settings={state.settings} editCity={editWeather} editing={editingWidgets} update={board.updateSettings} />
+    <DashboardWidgets settings={state.settings} editCity={editWeather} editing={editingWidgets} update={board.updateSettings}
+      setVisibility={board.setWidgetVisibility} />
 
     <div ref={canvas} className="canvas" role="region" aria-label="Bảng ghi chú">
       {area.width > 0 && area.height > 0 && state.notes.map((note, index) => <Note key={note.id} note={note} area={area} layer={index + 1}
@@ -213,7 +218,9 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
       </div>}
     </div>
 
-    {state.settings.showTimers && <TimerWidgets settings={state.settings} update={board.updateSettings} configure={editTimers} editing={editingWidgets} />}
+    {(widgetVisible(state.settings, 'countdown') || widgetVisible(state.settings, 'pomodoro')) &&
+      <TimerWidgets settings={state.settings} update={board.updateSettings} configure={editTimers} editing={editingWidgets}
+        setVisibility={board.setWidgetVisibility} />}
 
     {(state.error || state.conflicts.length > 0 || failed || layoutMessage) && <div className="notifications">
       {layoutMessage && <div className="notice glass" role="status">

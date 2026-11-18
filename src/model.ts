@@ -1,5 +1,5 @@
 import { defaultPomodoro } from './timers'
-import type { Countdown, Pomodoro } from './timers'
+import type { Countdown, CountdownEvent, Pomodoro } from './timers'
 
 export interface Point { x: number; y: number }
 export interface Size { width: number; height: number }
@@ -35,6 +35,13 @@ export interface WeatherAppearance extends WidgetAppearance {
   opacity: number
 }
 
+export interface TimerPosition extends Point {
+  scale?: number
+}
+
+export const widgetIds = ['clock', 'weather', 'countdown', 'pomodoro'] as const
+export type WidgetId = typeof widgetIds[number]
+
 export interface Settings {
   overlay: number
   blur: number
@@ -48,10 +55,12 @@ export interface Settings {
   clockAppearance?: WidgetAppearance
   weatherAppearance?: WeatherAppearance
   showTimers?: boolean
+  widgetVisibility?: Partial<Record<WidgetId, boolean>>
   countdown?: Countdown | null
+  countdowns?: CountdownEvent[]
   pomodoro?: Pomodoro
-  countdownPosition?: Point
-  pomodoroPosition?: Point
+  countdownPosition?: TimerPosition
+  pomodoroPosition?: TimerPosition
   fullHeightWidgets?: true
 }
 
@@ -71,17 +80,22 @@ export const defaultClockAppearance: WidgetAppearance = { x: 0, y: DEFAULT_WIDGE
 export const defaultWeatherAppearance: WeatherAppearance = {
   x: 1, y: DEFAULT_WIDGET_Y, color: '#f8f8f0', scale: 100, backgroundColor: '#1a2620', opacity: 61,
 }
-export const defaultCountdownPosition: Point = { x: 0, y: 1 }
-export const defaultPomodoroPosition: Point = { x: .5, y: 1 }
+export const defaultCountdownPosition: TimerPosition = { x: 0, y: 1, scale: 100 }
+export const defaultPomodoroPosition: TimerPosition = { x: .5, y: 1, scale: 100 }
 
 export const defaults: Settings = {
   overlay: 24, blur: 0, animate: true, defaultColor: colors[0], defaultOpacity: 96,
   width: 300, height: 240, fontSize: 15,
   city: { name: 'Hà Nội', country: 'Việt Nam', latitude: 21.0285, longitude: 105.8542 },
   clockAppearance: defaultClockAppearance, weatherAppearance: defaultWeatherAppearance,
-  showTimers: false, countdown: null, pomodoro: defaultPomodoro,
+  showTimers: false, widgetVisibility: {}, countdown: null, countdowns: [], pomodoro: defaultPomodoro,
   countdownPosition: defaultCountdownPosition, pomodoroPosition: defaultPomodoroPosition,
   fullHeightWidgets: true,
+}
+
+export function widgetVisible(settings: Settings, widget: WidgetId) {
+  return settings.widgetVisibility?.[widget]
+    ?? (widget === 'clock' || widget === 'weather' || settings.showTimers === true)
 }
 
 function expandWidgetPosition<T extends Point>(position?: T): T | undefined {

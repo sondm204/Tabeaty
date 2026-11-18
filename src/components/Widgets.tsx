@@ -4,8 +4,8 @@ import {
   Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Droplets,
   GitFork, Globe2, Mail, Plus, Search, Sun, SquarePlay,
 } from 'lucide-react'
-import { defaultClockAppearance, defaultWeatherAppearance } from '../model'
-import type { City, Settings, Shortcut } from '../model'
+import { defaultClockAppearance, defaultWeatherAppearance, widgetVisible } from '../model'
+import type { City, Settings, Shortcut, WidgetId } from '../model'
 import { getWeather } from '../services/weather'
 import type { Weather } from '../services/weather'
 import { EditableWidget } from './EditableWidget'
@@ -15,8 +15,9 @@ const dayFormat = new Intl.DateTimeFormat('vi-VN', { weekday: 'long' })
 const dateFormat = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const forecastDay = new Intl.DateTimeFormat('vi-VN', { weekday: 'short', timeZone: 'UTC' })
 
-export const DashboardWidgets = memo(function DashboardWidgets({ settings, editCity, editing, update }: {
+export const DashboardWidgets = memo(function DashboardWidgets({ settings, editCity, editing, update, setVisibility }: {
   settings: Settings; editCity: () => void; editing: boolean; update: (patch: Partial<Settings>) => void
+  setVisibility: (widget: WidgetId, visible: boolean) => void
 }) {
   const clock = settings.clockAppearance ?? defaultClockAppearance
   const weather = settings.weatherAppearance ?? defaultWeatherAppearance
@@ -25,12 +26,14 @@ export const DashboardWidgets = memo(function DashboardWidgets({ settings, editC
     '--weather-opacity': `${weather.opacity}%`,
   } as CSSProperties
   return <div className={`widgets${editing ? ' widgets-editing' : ''}`}>
-    <EditableWidget label="ngày giờ" appearance={clock} editing={editing}
-      update={(patch) => update({ clockAppearance: { ...clock, ...patch } })}><Clock /></EditableWidget>
-    <EditableWidget label="thời tiết" appearance={weather} editing={editing} style={weatherStyle}
+    {widgetVisible(settings, 'clock') && <EditableWidget label="ngày giờ" appearance={clock} editing={editing}
+      hide={() => setVisibility('clock', false)}
+      update={(patch) => update({ clockAppearance: { ...clock, ...patch } })}><Clock /></EditableWidget>}
+    {widgetVisible(settings, 'weather') && <EditableWidget label="thời tiết" appearance={weather} editing={editing} style={weatherStyle}
+      hide={() => setVisibility('weather', false)}
       update={(patch) => update({ weatherAppearance: { ...weather, ...patch } })}>
       <WeatherWidget city={settings.city} editCity={editCity} />
-    </EditableWidget>
+    </EditableWidget>}
   </div>
 })
 

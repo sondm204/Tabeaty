@@ -3,10 +3,10 @@
 NoteScape thay trang Tab mới của Chromium bằng bảng ghi chú nổi, đồng hồ tiếng Việt, thời tiết và lối tắt. Giao diện và ghi chú đã lưu mở được khi ngoại tuyến. Ảnh nền được tải từ Picsum và đổi sau khoảng 5 phút hoặc khi bấm **Đổi hình nền**. Bạn có thể kéo ghi chú bằng thanh tiêu đề, đổi kích thước ở cạnh hoặc góc và chỉnh màu, độ đậm nền, cỡ chữ qua biểu tượng bảng màu.
 
 - **Workspace**. Mở menu cạnh logo để tạo, đổi tên và chuyển giữa tối đa ba workspace. Mỗi workspace có ghi chú, lối tắt, cài đặt và bố cục riêng. Dữ liệu của bản cũ nằm trong **Workspace 1**. Tab mới mở workspace bạn chọn gần nhất trên trình duyệt này.
-- **Bố cục tiện ích**. Bật **Chỉnh bố cục tiện ích** để kéo từng thẻ ngày giờ, thời tiết, Countdown và Pomodoro lên sát mép trên hoặc vào vùng làm việc bên dưới. Kéo góc thẻ ngày giờ hoặc thời tiết để đổi kích thước. Trong **Cài đặt → Tiện ích** có các thanh chỉnh vị trí, cài đặt giao diện và mục chọn thành phố.
+- **Bố cục tiện ích**. Bật **Chỉnh bố cục tiện ích** để kéo từng thẻ Ngày giờ, Thời tiết, Countdown và Pomodoro. Kéo góc để đổi kích thước hoặc bấm thùng rác trên thẻ để ẩn. Trong **Cài đặt → Tiện ích**, mở từng mục để bật lại widget hoặc đổi cấu hình. Mục **Ghi chú** và **Lối tắt** cũng nằm tại đây.
 - **Căn và xếp ghi chú**. Giữ **Shift** khi kéo ghi chú hoặc kéo tay nắm đổi kích thước để căn theo cạnh hoặc tâm. Thả chuột khi đường dóng hiện để lưu kết quả. Nút **Xếp ghi chú theo lưới** xếp từ trên xuống dưới, giữ nguyên kích thước và vị trí của ghi chú đã khóa. Khi không đủ chỗ, ứng dụng giữ bố cục hiện tại.
 - **Ghi chú định dạng**. Bấm nút **Bật định dạng ghi chú** (biểu tượng chữ T) để mở trình soạn thảo với chữ đậm, nghiêng, danh sách gạch đầu dòng, danh sách đánh số và checklist có thể đánh dấu. Nội dung văn bản hiện tại được chuyển sang trình soạn thảo. Dữ liệu định dạng dùng chung hạn mức lưu trữ với nội dung.
-- **Hẹn giờ**. Trong **Cài đặt → Tiện ích**, tích **Hiện Countdown và Pomodoro**, đặt ngày giờ cho Countdown và độ dài phiên tập trung/nghỉ. Pomodoro có nút bắt đầu, tạm dừng, tiếp tục, đặt lại và chuyển phiên. Khi hết giờ, bấm nút bắt đầu phiên kế tiếp. Đồng hồ dựa trên mốc thời gian đã lưu để tính thời gian còn lại khi mở lại tab.
+- **Hẹn giờ**. Trong **Cài đặt → Tiện ích**, mở **Countdown** để bật thẻ và thêm tối đa ba mốc. Mở **Pomodoro** để bật riêng thẻ và đặt độ dài phiên tập trung/nghỉ. Pomodoro có nút bắt đầu, tạm dừng, tiếp tục, đặt lại và chuyển phiên. Khi hết giờ, bấm nút bắt đầu phiên kế tiếp. Đồng hồ dựa trên mốc thời gian đã lưu để tính thời gian còn lại khi mở lại tab.
 
 ## Cài đặt và phát triển
 
@@ -42,7 +42,7 @@ Tên và dữ liệu workspace cũng được đồng bộ. Các workspace dùng
 
 Thay đổi được gộp sau khoảng 2 giây ngừng chỉnh sửa. Trạng thái **Đã lưu trên trình duyệt** xác nhận bộ nhớ tại chỗ đã nhận thay đổi. Các tab lắng nghe sự kiện thay đổi và áp dụng phiên bản hợp lệ mới hơn theo dấu thời gian, dùng mã phiên ghi để phân xử khi trùng thời gian. Bản sửa chưa lưu được giữ trong tab khi nhận cập nhật xung đột, kể cả thao tác xóa. Người dùng chọn phiên bản cần giữ. Chromium xử lý việc phân phối giữa máy và có thể nhận hai lần ghi gần như đồng thời trước khi NoteScape thấy xung đột.
 
-Chrome giới hạn khoảng 8 KB mỗi mục, 100 KB tổng dung lượng, 512 mục và tốc độ ghi theo phút/giờ. NoteScape kiểm tra dung lượng theo UTF-8 với khoảng dự phòng. Nếu Chrome từ chối ghi, bạn có thể rút ngắn nội dung, xóa bớt mục, thử lại hoặc xuất bản đang mở. Bản nháp trong tab hỗ trợ khôi phục khi tải lại chính tab đó nếu trình duyệt còn giữ phiên. Với nội dung quan trọng chưa lưu được, dùng **Cài đặt → Ghi chú → Xuất JSON** trước khi đóng tab. Nhập JSON kiểm tra dữ liệu và dung lượng riêng của tệp, cập nhật ghi chú trùng ID, giữ ghi chú khác và áp dụng cài đặt cùng lối tắt trong tệp.
+Chrome giới hạn khoảng 8 KB mỗi mục, 100 KB tổng dung lượng, 512 mục và tốc độ ghi theo phút/giờ. NoteScape kiểm tra dung lượng theo UTF-8 với khoảng dự phòng. Nếu Chrome từ chối ghi, bạn có thể rút ngắn nội dung, xóa bớt mục, thử lại hoặc xuất bản đang mở. Bản nháp trong tab hỗ trợ khôi phục khi tải lại chính tab đó nếu trình duyệt còn giữ phiên. Với nội dung quan trọng chưa lưu được, dùng **Cài đặt → Tiện ích → Ghi chú → Xuất JSON** trước khi đóng tab. Nhập JSON kiểm tra dữ liệu và dung lượng riêng của tệp, cập nhật ghi chú trùng ID, giữ ghi chú khác và áp dụng cài đặt cùng lối tắt trong tệp.
 
 ## Dịch vụ bên ngoài
 
@@ -74,8 +74,8 @@ Extension chỉ khai báo quyền `storage` và quyền truy cập hai máy ch�
 - [ ] Thử ở 1366×768, 1440×900, 1920×1080 và thu nhỏ cửa sổ. Kiểm tra các nút trên ghi chú còn truy cập được.
 - [ ] Đổi ảnh bằng tay, đợi khoảng 5 phút rồi thử đưa tab xuống nền và quay lại sau khi quá hạn. Thử khi mất mạng để kiểm tra ảnh hiện tại hoặc nền chuyển sắc.
 - [ ] Đổi thành phố, kiểm tra nhiệt độ, độ ẩm và ba ngày dự báo. Thử tên thành phố không tồn tại.
-- [ ] Trong **Cài đặt → Tiện ích**, đổi màu, kích thước và vị trí của ngày giờ và thời tiết. Tải lại tab để kiểm tra cài đặt đã lưu rồi thử đặt lại cả hai.
-- [ ] Bật **Hiện Countdown và Pomodoro** trong tab **Tiện ích**, thử kéo từng thẻ lên trên. Đặt mốc Countdown, bắt đầu rồi tạm dừng và tiếp tục Pomodoro. Tải lại tab và kiểm tra vị trí cùng thời gian còn lại.
+- [ ] Trong **Cài đặt → Tiện ích**, mở và thu gọn từng mục, bật tắt từng widget và đổi màu. Kéo thẻ, đổi kích thước từ góc và thử ẩn bằng thùng rác. Tải lại để kiểm tra cài đặt đã lưu.
+- [ ] Thêm ba mốc Countdown, sửa hoặc xóa một mốc, rồi thử ẩn và bật lại thẻ. Bắt đầu, tạm dừng và tiếp tục Pomodoro, sau đó kiểm tra thời gian còn lại khi tải lại tab.
 - [ ] Tạo hai workspace mới, thử đổi tên và xác nhận giới hạn ba workspace. Chuyển qua lại khi có ghi chú và cài đặt khác nhau, rồi tải lại tab.
 - [ ] Thêm, sửa, đổi thứ tự, xóa và bấm mở lối tắt. Thử URL có giao thức không được hỗ trợ.
 - [ ] Xuất và nhập JSON, sau đó thử nhập tệp sai định dạng.

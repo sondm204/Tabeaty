@@ -1,5 +1,5 @@
 import { defaults, defaultShortcuts, settingsForFullHeight } from '../model'
-import type { Settings, Shortcut, StickyNote } from '../model'
+import type { Settings, Shortcut, StickyNote, WidgetId } from '../model'
 import { compare, decode, isKey, ITEM_LIMIT, noteKey, SyncQuotaError } from './storage'
 import type { Changes, Content, Entry, StorageKey, SyncStorage } from './storage'
 
@@ -208,6 +208,10 @@ export class Board {
   updateSettings = (patch: Partial<Settings>) => {
     this.stage('settings', { ...this.state.settings, ...patch })
     this.changed()
+  }
+
+  setWidgetVisibility = (widget: WidgetId, visible: boolean) => {
+    this.updateSettings({ widgetVisibility: { ...this.state.settings.widgetVisibility, [widget]: visible } })
   }
 
   setShortcuts = (shortcuts: Shortcut[]) => {

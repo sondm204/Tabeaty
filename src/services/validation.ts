@@ -1,6 +1,8 @@
 import { MAX_HEIGHT, MAX_SHORTCUTS, MAX_WIDGET_SCALE, MAX_WIDTH, MIN_HEIGHT, MIN_WIDGET_SCALE, MIN_WIDTH } from '../model'
 import type { City, Settings, Shortcut, StickyNote, WeatherAppearance, WidgetAppearance } from '../model'
 import { parseRichText } from '../rich-text'
+import { widgetIds } from '../model'
+import { MAX_COUNTDOWNS, MAX_TIMER_TIMESTAMP } from '../timers'
 
 export const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -56,10 +58,29 @@ function isWeatherAppearance(value: unknown): value is WeatherAppearance {
     && color(value.backgroundColor) && inRange(value.opacity, 0, 100)
 }
 
-const isTimestamp = (value: unknown) => inRange(value, 1, 253402300799999)
+const isTimestamp = (value: unknown) => inRange(value, 1, MAX_TIMER_TIMESTAMP)
 
 function isCountdown(value: unknown) {
   return record(value) && string(value.title, 60) && isTimestamp(value.endsAt)
+}
+
+function isCountdownList(value: unknown) {
+  if (!Array.isArray(value) || value.length > MAX_COUNTDOWNS) return false
+  const ids = new Set<string>()
+  return value.every((item: unknown) => {
+    if (!record(item) || !id(item.id) || ids.has(item.id) || !isCountdown(item)) return false
+    ids.add(item.id)
+    return true
+  })
+}
+
+function isTimerPosition(value: unknown) {
+  return record(value) && isPosition(value)
+    && (value.scale === undefined || inRange(value.scale, MIN_WIDGET_SCALE, MAX_WIDGET_SCALE))
+}
+
+function isWidgetVisibility(value: unknown) {
+  return record(value) && widgetIds.every((key) => value[key] === undefined || typeof value[key] === 'boolean')
 }
 
 function isPomodoro(value: unknown) {
@@ -77,10 +98,12 @@ export function isSettings(value: unknown): value is Settings {
     && (value.clockAppearance === undefined || isWidgetAppearance(value.clockAppearance))
     && (value.weatherAppearance === undefined || isWeatherAppearance(value.weatherAppearance))
     && (value.showTimers === undefined || typeof value.showTimers === 'boolean')
+    && (value.widgetVisibility === undefined || isWidgetVisibility(value.widgetVisibility))
     && (value.countdown === undefined || value.countdown === null || isCountdown(value.countdown))
+    && (value.countdowns === undefined || isCountdownList(value.countdowns))
     && (value.pomodoro === undefined || isPomodoro(value.pomodoro))
-    && (value.countdownPosition === undefined || isPosition(value.countdownPosition))
-    && (value.pomodoroPosition === undefined || isPosition(value.pomodoroPosition))
+    && (value.countdownPosition === undefined || isTimerPosition(value.countdownPosition))
+    && (value.pomodoroPosition === undefined || isTimerPosition(value.pomodoroPosition))
     && (value.fullHeightWidgets === undefined || value.fullHeightWidgets === true)
 }
 

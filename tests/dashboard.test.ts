@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createNote, defaults, noteRect } from '../src/model'
+import { createNote, defaults, noteRect, widgetVisible } from '../src/model'
 import { arrangeNotes } from '../src/note-grid'
 import { parseRichText, richTextFromPlain, serializeRichText } from '../src/rich-text'
 import { parseBackup, serializeBackup } from '../src/services/backup'
 import { isSettings } from '../src/services/validation'
-import { defaultPomodoro, pomodoroRemaining, timerParts, togglePomodoro } from '../src/timers'
+import { countdownEvents, defaultPomodoro, pomodoroRemaining, saveCountdown, timerParts, togglePomodoro } from '../src/timers'
 
 const note = (id: string, createdAt: number) => ({
   ...createNote({ ...defaults, width: 200, height: 150 }, { x: 0, y: 0 }, 1), id, createdAt,
@@ -68,13 +68,28 @@ describe('Ghi chú định dạng', () => {
 
 describe('Hẹn giờ', () => {
   it('khôi phục bố cục hẹn giờ riêng và vẫn đọc được bản sao lưu cũ', () => {
-    const { countdownPosition, pomodoroPosition, ...old } = defaults
+    const { countdownPosition, pomodoroPosition, countdowns, widgetVisibility, ...old } = defaults
     const backup = { notes: [], shortcuts: [], settings: old }
     expect(parseBackup(serializeBackup(backup)).settings).toEqual(old)
     const settings = { ...old, countdownPosition: { x: .4, y: .2 }, pomodoroPosition: { x: .8, y: .65 } }
     expect(parseBackup(serializeBackup({ ...backup, settings })).settings).toEqual(settings)
     expect(isSettings({ ...settings, countdownPosition: { x: 1.1, y: .2 } })).toBe(false)
     expect(isSettings({ ...settings, pomodoroPosition: { x: .8, y: -1 } })).toBe(false)
+  })
+
+  it('giữ mốc cũ và giới hạn ba mốc có thể sửa riêng', () => {
+    const original = { title: 'Mốc cũ', endsAt: 1000 }
+    const first = countdownEvents({ countdown: original })
+    expect(first).toEqual([{ id: 'legacy', ...original }])
+    const second = saveCountdown(first, { id: 'second', title: 'Mốc hai', endsAt: 2000 }, true)!
+    const third = saveCountdown(second, { id: 'third', title: 'Mốc ba', endsAt: 3000 }, true)!
+    expect(saveCountdown(third, { id: 'fourth', title: 'Mốc bốn', endsAt: 4000 }, true)).toBeUndefined()
+    expect(saveCountdown(third, { id: 'legacy', title: 'Đã sửa', endsAt: 1500 }, false)?.[0]?.title).toBe('Đã sửa')
+    expect(saveCountdown(third, { id: 'absent', title: 'Đã xóa', endsAt: 5000 }, false)).toBeUndefined()
+    expect(countdownEvents({ countdown: original, countdowns: [] })).toEqual([])
+    expect(isSettings({ ...defaults, countdowns: third })).toBe(true)
+    expect(isSettings({ ...defaults, countdowns: [...third, ...first] })).toBe(false)
+    expect(isSettings({ ...defaults, countdowns: [first[0], first[0]] })).toBe(false)
   })
 
   it('giữ thời gian còn lại khi tạm dừng và chuyển pha khi hết giờ', () => {
@@ -94,4 +109,14 @@ describe('Hẹn giờ', () => {
     expect(isSettings({ ...defaults, countdown: { title: 'Mốc', endsAt: 2000 } })).toBe(true)
     expect(isSettings({ ...defaults, pomodoro: { ...defaultPomodoro, breakMinutes: 0 } })).toBe(false)
   })
+})
+
+it('đọc công tắc hẹn giờ cũ và ưu tiên trạng thái riêng của từng tiện ích', () => {
+  const settings = { ...defaults, showTimers: true, widgetVisibility: { countdown: false, weather: false } }
+  expect(widgetVisible(settings, 'countdown')).toBe(false)
+  expect(widgetVisible(settings, 'pomodoro')).toBe(true)
+  expect(widgetVisible(settings, 'weather')).toBe(false)
+  expect(widgetVisible(settings, 'clock')).toBe(true)
+  expect(widgetVisible(defaults, 'countdown')).toBe(false)
+  expect(isSettings({ ...settings, widgetVisibility: { clock: 'false' } })).toBe(false)
 })

@@ -1,19 +1,27 @@
 import { FastForward, Hourglass, Pause, Play, RotateCcw, Timer } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { FormEvent, Ref } from 'react'
-import { defaultCountdownPosition, defaultPomodoroPosition } from '../model'
-import type { Settings } from '../model'
-import { defaultPomodoro, nextPomodoro, pomodoroRemaining, resetPomodoro, timerParts, togglePomodoro } from '../timers'
-import { IconButton, PositionFields, RangeField } from './Controls'
+import type { FormEvent } from 'react'
+import { defaultCountdownPosition, defaultPomodoroPosition, widgetVisible } from '../model'
+import type { Settings, WidgetId } from '../model'
+import {
+  countdownEvents, defaultPomodoro, MAX_COUNTDOWNS, MAX_TIMER_TIMESTAMP, nextPomodoro, pomodoroRemaining,
+  resetPomodoro, saveCountdown, timerParts, togglePomodoro,
+} from '../timers'
+import { IconButton, RangeField } from './Controls'
 import { EditableWidget } from './EditableWidget'
 
-export function TimerWidgets({ settings, update, configure, editing }: {
+const eventDate = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
+
+export function TimerWidgets({ settings, update, configure, editing, setVisibility }: {
   settings: Settings; update: (patch: Partial<Settings>) => void; configure: () => void; editing: boolean
+  setVisibility: (widget: WidgetId, visible: boolean) => void
 }) {
   const [now, setNow] = useState(Date.now)
   const timer = settings.pomodoro ?? defaultPomodoro
-  const countdown = settings.countdown
-  const until = Math.max(countdown?.endsAt ?? 0, timer.endsAt ?? 0)
+  const countdowns = countdownEvents(settings).slice().sort((a, b) => a.endsAt - b.endsAt)
+  const showCountdown = widgetVisible(settings, 'countdown')
+  const showPomodoro = widgetVisible(settings, 'pomodoro')
+  const until = Math.max(showCountdown ? countdowns.at(-1)?.endsAt ?? 0 : 0, showPomodoro ? timer.endsAt ?? 0 : 0)
   useEffect(() => {
     let tickId: ReturnType<typeof setTimeout>
     function tick() {
@@ -33,27 +41,37 @@ export function TimerWidgets({ settings, update, configure, editing }: {
   const remaining = pomodoroRemaining(timer, now)
   const running = timer.endsAt !== null && remaining > 0
   const finished = timer.endsAt !== null && remaining === 0
-  const countdownParts = countdown ? timerParts(countdown.endsAt - now) : undefined
   const pomodoroTime = timerParts(remaining).time.replace(/^00:/, '')
   const nextLabel = timer.phase === 'focus' ? 'Bắt đầu nghỉ' : 'Bắt đầu tập trung'
-  const countdownPosition = settings.countdownPosition ?? defaultCountdownPosition
-  const pomodoroPosition = settings.pomodoroPosition ?? defaultPomodoroPosition
+  const countdownPosition = { ...defaultCountdownPosition, ...settings.countdownPosition }
+  const pomodoroPosition = { ...defaultPomodoroPosition, ...settings.pomodoroPosition }
   return <aside className="widgets timer-widgets" aria-label="Tiện ích hẹn giờ">
-    <EditableWidget label="Countdown" appearance={countdownPosition} editing={editing}
-      update={({ x = countdownPosition.x, y = countdownPosition.y }) => update({ countdownPosition: { x, y } })}>
+    {showCountdown && <EditableWidget label="Countdown" appearance={countdownPosition} editing={editing}
+      hide={() => setVisibility('countdown', false)}
+      update={({ x = countdownPosition.x, y = countdownPosition.y, scale = countdownPosition.scale }) => update({ countdownPosition: { x, y, scale } })}>
       <section className="timer-card glass" aria-label="Countdown">
-        <div className="timer-heading"><Hourglass size={15} /> <h2>{countdown?.title || 'Countdown'}</h2></div>
-        {countdownParts && <div className="timer-value" role="timer">
-          {countdownParts.days > 0 && <small>{countdownParts.days} ngày </small>}{countdownParts.time}
-        </div>}
+        <div className="timer-heading"><Hourglass size={15} /> <h2>Countdown</h2></div>
+        {countdowns.length > 0 && <ul className="countdown-events">
+          {countdowns.map((event) => {
+            const parts = timerParts(event.endsAt - now)
+            const title = event.title || 'Mốc thời gian'
+            return <li key={event.id}>
+              <h3>{title}</h3>
+              <div className="timer-value" role="timer" aria-label={title}>
+                {parts.days > 0 && <small>{parts.days} ngày </small>}{parts.time}
+              </div>
+              <div className="countdown-date">{event.endsAt <= now ? 'Đã đến mốc' : eventDate.format(event.endsAt)}</div>
+            </li>
+          })}
+        </ul>}
         <div className="timer-actions">
-          {countdown && <span>{countdown.endsAt <= now ? 'Đã đến mốc' : new Date(countdown.endsAt).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}</span>}
-          <button type="button" className="timer-link" onClick={configure}>{countdown ? 'Đổi mốc' : 'Đặt mốc'}</button>
+          <button type="button" className="timer-link" onClick={configure}>{countdowns.length ? 'Quản lý mốc' : 'Đặt mốc'}</button>
         </div>
       </section>
-    </EditableWidget>
-    <EditableWidget label="Pomodoro" appearance={pomodoroPosition} editing={editing}
-      update={({ x = pomodoroPosition.x, y = pomodoroPosition.y }) => update({ pomodoroPosition: { x, y } })}>
+    </EditableWidget>}
+    {showPomodoro && <EditableWidget label="Pomodoro" appearance={pomodoroPosition} editing={editing}
+      hide={() => setVisibility('pomodoro', false)}
+      update={({ x = pomodoroPosition.x, y = pomodoroPosition.y, scale = pomodoroPosition.scale }) => update({ pomodoroPosition: { x, y, scale } })}>
       <section className="timer-card glass" aria-label="Pomodoro">
         <div className="timer-heading"><Timer size={15} /> <h2>Pomodoro</h2><span>{timer.phase === 'focus' ? 'Tập trung' : 'Nghỉ'}</span></div>
         <div className="timer-value" role="timer">{pomodoroTime}</div>
@@ -70,7 +88,7 @@ export function TimerWidgets({ settings, update, configure, editing }: {
           <IconButton label="Đặt lại Pomodoro" onClick={() => update({ pomodoro: resetPomodoro(timer) })}><RotateCcw size={15} /></IconButton>
         </div>
       </section>
-    </EditableWidget>
+    </EditableWidget>}
   </aside>
 }
 
@@ -80,57 +98,77 @@ function localDateTime(ending?: number) {
   return new Date(ending - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
 }
 
-export function TimerSettings({ settings, update, countdownRef }: {
-  settings: Settings; update: (patch: Partial<Settings>) => void; countdownRef?: Ref<HTMLFieldSetElement>
+export function CountdownSettings({ settings, update, startAdding }: {
+  settings: Settings; update: (patch: Partial<Settings>) => void; startAdding: boolean
 }) {
-  const timer = settings.pomodoro ?? defaultPomodoro
-  const countdown = settings.countdown
-  const countdownPosition = settings.countdownPosition ?? defaultCountdownPosition
-  const pomodoroPosition = settings.pomodoroPosition ?? defaultPomodoroPosition
+  const events = countdownEvents(settings)
+  const [editing, setEditing] = useState<{ id?: string } | undefined>(() => startAdding && !events.length ? {} : undefined)
   const [error, setError] = useState('')
+  const event = editing?.id ? events.find((item) => item.id === editing.id) : undefined
 
-  function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const inputs = new FormData(event.currentTarget)
+  function edit(id?: string) {
+    setEditing({ id })
+    setError('')
+  }
+
+  function save(submit: FormEvent<HTMLFormElement>) {
+    submit.preventDefault()
+    if (!editing) return
+    const inputs = new FormData(submit.currentTarget)
     const endsAt = new Date(String(inputs.get('endsAt'))).getTime()
-    if (!Number.isFinite(endsAt) || endsAt <= 0 || endsAt > 253402300799999) {
+    if (!Number.isFinite(endsAt) || endsAt <= 0 || endsAt > MAX_TIMER_TIMESTAMP) {
       setError('Chọn ngày và giờ hợp lệ.')
       return
     }
+    const next = saveCountdown(events, {
+      id: editing.id ?? crypto.randomUUID(), title: String(inputs.get('title') ?? '').trim(), endsAt,
+    }, editing.id === undefined)
+    if (!next) {
+      setError(editing.id ? 'Mốc này đã được xóa.' : 'Chỉ lưu được tối đa 3 mốc thời gian.')
+      return
+    }
+    update({ countdowns: next })
+    setEditing(undefined)
     setError('')
-    update({ countdown: { title: String(inputs.get('title') ?? '').trim(), endsAt }, showTimers: true })
   }
 
   return <>
-    <label className="toggle-field timer-visibility">Hiện Countdown và Pomodoro
-      <input type="checkbox" checked={settings.showTimers ?? false}
-        onChange={(event) => update({ showTimers: event.target.checked })} />
-    </label>
-    <fieldset className="widget-settings" ref={countdownRef}>
-      <legend>Countdown</legend>
-      <form className="field-stack" key={JSON.stringify(countdown ?? null)} onSubmit={save}>
-        <label>Tên sự kiện<input name="title" defaultValue={countdown?.title} maxLength={60} /></label>
-        <label>Ngày và giờ kết thúc<input name="endsAt" type="datetime-local" required defaultValue={localDateTime(countdown?.endsAt)} /></label>
-        {error && <p className="form-error" role="alert">{error}</p>}
-        <div className="button-row">
-          <button type="submit" className="primary-button">Lưu mốc</button>
-          {countdown && <button type="button" className="secondary-button" onClick={() => {
-            setError('')
-            update({ countdown: null })
-          }}>Xóa mốc</button>}
-        </div>
-      </form>
-      <PositionFields position={countdownPosition} update={(patch) => update({ countdownPosition: { ...countdownPosition, ...patch } })} />
-      <button type="button" className="secondary-button" onClick={() => update({ countdownPosition: defaultCountdownPosition })}>Đặt lại vị trí Countdown</button>
-    </fieldset>
-    <fieldset className="widget-settings">
-      <legend>Pomodoro</legend>
-      <RangeField label="Thời gian tập trung" value={timer.focusMinutes} min={1} max={120} unit=" phút"
-        onChange={(focusMinutes) => update({ pomodoro: { ...timer, focusMinutes } })} />
-      <RangeField label="Thời gian nghỉ" value={timer.breakMinutes} min={1} max={60} unit=" phút"
-        onChange={(breakMinutes) => update({ pomodoro: { ...timer, breakMinutes } })} />
-      <PositionFields position={pomodoroPosition} update={(patch) => update({ pomodoroPosition: { ...pomodoroPosition, ...patch } })} />
-      <button type="button" className="secondary-button" onClick={() => update({ pomodoroPosition: defaultPomodoroPosition })}>Đặt lại vị trí Pomodoro</button>
-    </fieldset>
+    {events.length > 0 && <ul className="countdown-settings-list">
+      {events.map((item) => {
+        const title = item.title || 'Mốc thời gian'
+        return <li key={item.id}>
+          <div><strong>{title}</strong><small>{eventDate.format(item.endsAt)}</small></div>
+          <button type="button" className="secondary-button" aria-label={`Sửa ${title}`} onClick={() => edit(item.id)}>Sửa</button>
+          <button type="button" className="secondary-button" aria-label={`Xóa ${title}`} onClick={() => {
+            update({ countdowns: events.filter((other) => other.id !== item.id) })
+            if (editing?.id === item.id) setEditing(undefined)
+          }}>Xóa</button>
+        </li>
+      })}
+    </ul>}
+    {editing ? <form className="field-stack" key={editing.id ?? ''} onSubmit={save}>
+      <label>Tên sự kiện<input name="title" defaultValue={event?.title} maxLength={60} /></label>
+      <label>Ngày và giờ kết thúc<input name="endsAt" type="datetime-local" required defaultValue={localDateTime(event?.endsAt)} /></label>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <div className="button-row">
+        <button type="submit" className="primary-button">Lưu mốc</button>
+        <button type="button" className="secondary-button" onClick={() => setEditing(undefined)}>Hủy</button>
+      </div>
+    </form> : <div className="countdown-settings-actions">
+      <button type="button" className="secondary-button" disabled={events.length >= MAX_COUNTDOWNS} onClick={() => edit()}>Thêm mốc</button>
+      <span>{events.length}/{MAX_COUNTDOWNS} mốc</span>
+    </div>}
+  </>
+}
+
+export function PomodoroSettings({ settings, update }: {
+  settings: Settings; update: (patch: Partial<Settings>) => void
+}) {
+  const timer = settings.pomodoro ?? defaultPomodoro
+  return <>
+    <RangeField label="Thời gian tập trung" value={timer.focusMinutes} min={1} max={120} unit=" phút"
+      onChange={(focusMinutes) => update({ pomodoro: { ...timer, focusMinutes } })} />
+    <RangeField label="Thời gian nghỉ" value={timer.breakMinutes} min={1} max={60} unit=" phút"
+      onChange={(breakMinutes) => update({ pomodoro: { ...timer, breakMinutes } })} />
   </>
 }

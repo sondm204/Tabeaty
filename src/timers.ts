@@ -3,6 +3,23 @@ export interface Countdown {
   endsAt: number
 }
 
+export interface CountdownEvent extends Countdown {
+  id: string
+}
+
+export const MAX_COUNTDOWNS = 3
+export const MAX_TIMER_TIMESTAMP = 253402300799999
+
+export function countdownEvents(settings: { countdowns?: CountdownEvent[]; countdown?: Countdown | null }) {
+  return settings.countdowns ?? (settings.countdown ? [{ ...settings.countdown, id: 'legacy' }] : [])
+}
+
+export function saveCountdown(events: CountdownEvent[], event: CountdownEvent, adding: boolean) {
+  if (adding) return events.length < MAX_COUNTDOWNS && !events.some(({ id }) => id === event.id)
+    ? [...events, event] : undefined
+  if (events.some(({ id }) => id === event.id)) return events.map((item) => item.id === event.id ? event : item)
+}
+
 export interface Pomodoro {
   focusMinutes: number
   breakMinutes: number

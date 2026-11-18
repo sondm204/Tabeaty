@@ -1,10 +1,14 @@
-import { Grip, MoveDiagonal, MoveDiagonal2 } from 'lucide-react'
+import { Grip, MoveDiagonal, MoveDiagonal2, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
-import type { CSSProperties, PointerEvent, ReactNode } from 'react'
+import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'react'
 import { clamp, MAX_WIDGET_SCALE, MIN_WIDGET_SCALE, relativePoint } from '../model'
 import type { Point, Rect, Size, WidgetAppearance } from '../model'
 
 type WidgetLayout = Point & Partial<Pick<WidgetAppearance, 'color' | 'scale'>>
+const arrowDirections: Record<string, Point> = {
+  ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 },
+  ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 },
+}
 
 interface Gesture {
   pointer: number
@@ -16,11 +20,12 @@ interface Gesture {
   leftHandle: boolean
 }
 
-export function EditableWidget({ label, appearance, editing, update, style, children }: {
+export function EditableWidget({ label, appearance, editing, update, hide, style, children }: {
   label: string
   appearance: WidgetLayout
   editing: boolean
   update: (patch: Partial<WidgetAppearance>) => void
+  hide: () => void
   style?: CSSProperties
   children: ReactNode
 }) {
@@ -71,6 +76,19 @@ export function EditableWidget({ label, appearance, editing, update, style, chil
     if (patch) update(patch)
   }
 
+  function step(event: KeyboardEvent<HTMLButtonElement>, resize: boolean) {
+    const direction = arrowDirections[event.key]
+    if (!direction || gesture.current) return
+    event.preventDefault()
+    const increment = event.shiftKey ? 5 : 1
+    if (resize) {
+      const scale = (appearance.scale ?? 100) + (direction.x - direction.y) * increment
+      update({ scale: clamp(scale, MIN_WIDGET_SCALE, MAX_WIDGET_SCALE) })
+    } else {
+      update({ x: clamp(appearance.x + direction.x * increment / 100, 0, 1), y: clamp(appearance.y + direction.y * increment / 100, 0, 1) })
+    }
+  }
+
   const properties = {
     ...style,
     '--widget-x': `${layout.x * 100}%`, '--widget-y': `${layout.y * 100}%`,
@@ -92,10 +110,12 @@ export function EditableWidget({ label, appearance, editing, update, style, chil
     {children}
     {editing && <>
       <button type="button" className="widget-handle widget-move" aria-label={`Di chuyển ${label}`} title={`Di chuyển ${label}`}
-        onPointerDown={(event) => start(event, false)} {...handles}><Grip size={16} /></button>
+        onPointerDown={(event) => start(event, false)} onKeyDown={(event) => step(event, false)} {...handles}><Grip size={16} /></button>
+      <button type="button" className="widget-handle widget-hide" aria-label={`Ẩn ${label}`} title={`Ẩn ${label}`}
+        onClick={hide}><Trash2 size={14} /></button>
       {appearance.scale !== undefined && <button type="button" className={`widget-handle widget-resize ${leftHandle ? 'widget-resize-left' : ''}`}
         aria-label={`Đổi kích thước ${label}`} title={`Đổi kích thước ${label}`}
-        onPointerDown={(event) => start(event, true)} {...handles}>{leftHandle ? <MoveDiagonal size={14} /> : <MoveDiagonal2 size={14} />}</button>}
+        onPointerDown={(event) => start(event, true)} onKeyDown={(event) => step(event, true)} {...handles}>{leftHandle ? <MoveDiagonal size={14} /> : <MoveDiagonal2 size={14} />}</button>}
     </>}
   </div>
 }
