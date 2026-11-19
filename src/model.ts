@@ -64,6 +64,7 @@ export interface Settings {
   countdownPosition?: ScalablePosition
   pomodoroPosition?: ScalablePosition
   shortcutPosition?: ScalablePosition
+  layoutReference?: Size | null
   fullHeightWidgets?: true
 }
 
@@ -95,6 +96,7 @@ export const defaults: Settings = {
   showTimers: false, widgetVisibility: {}, countdown: null, countdowns: [], pomodoro: defaultPomodoro,
   countdownPosition: defaultCountdownPosition, pomodoroPosition: defaultPomodoroPosition, shortcutPosition: defaultShortcutPosition,
   fullHeightWidgets: true,
+  layoutReference: null,
 }
 
 export function widgetVisible(settings: Settings, widget: WidgetId) {

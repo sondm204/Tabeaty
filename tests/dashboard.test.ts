@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { fitBoard } from '../src/board-layout'
 import { createNote, defaults, widgetVisible } from '../src/model'
 import { parseRichText, richTextFromPlain, serializeRichText } from '../src/rich-text'
 import { parseBackup, serializeBackup } from '../src/services/backup'
@@ -132,4 +133,19 @@ it('ẩn và bật lại bảng ghi chú mà không mất dữ liệu sao lưu',
   expect(restored.notes).toEqual(saved.notes)
   expect(widgetVisible(restored.settings, 'notes')).toBe(false)
   expect(widgetVisible({ ...restored.settings, widgetVisibility: { notes: true } }, 'notes')).toBe(true)
+})
+
+it('thu phóng cả bố cục theo cùng tỷ lệ và căn giữa trên màn hình ngang hoặc dọc', () => {
+  const reference = { width: 1920, height: 960 }
+  expect(fitBoard(reference, reference)).toEqual({ ...reference, scale: 1, x: 0, y: 0 })
+  expect(fitBoard(reference, { width: 1366, height: 654 })).toEqual({ ...reference, scale: .68125, x: 29, y: 0 })
+  expect(fitBoard(reference, { width: 900, height: 1200 })).toEqual({ ...reference, scale: .46875, x: 0, y: 375 })
+})
+
+it('lưu kích thước chuẩn của workspace trong bản sao lưu và chấp nhận cấu hình cũ', () => {
+  const { layoutReference, ...legacy } = defaults
+  expect(isSettings(legacy)).toBe(true)
+  const settings = { ...legacy, layoutReference: { width: 1920, height: 960 } }
+  expect(parseBackup(serializeBackup({ settings, notes: [], shortcuts: [] })).settings.layoutReference).toEqual(settings.layoutReference)
+  expect(isSettings({ ...settings, layoutReference: { width: 0, height: 960 } })).toBe(false)
 })

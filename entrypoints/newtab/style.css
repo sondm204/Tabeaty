@@ -27,6 +27,16 @@
   min-height: 0;
   overflow: hidden;
 }
+.board-stage {
+  --board-vw: 1vw;
+  --side: clamp(22px, 4.3 * var(--board-vw), 86px);
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  container: board / size;
+  transform-origin: top left;
+}
 .wallpaper, .wallpaper-tint, .wallpaper-images { position: absolute; inset: 0; pointer-events: none; }
 .wallpaper {
   z-index: -1;
@@ -98,16 +108,16 @@
   max-width: 100%;
 }
 .clock { padding-top: 8px; min-width: 0; color: var(--widget-color); text-shadow: 0 3px 32px #101f18a8; }
-.clock-date { @apply flex items-center gap-2.5; flex-wrap: wrap; font-size: calc(clamp(12px, 1.1vw, 16px) * var(--widget-scale)); letter-spacing: .01em; }
+.clock-date { @apply flex items-center gap-2.5; flex-wrap: wrap; font-size: calc(clamp(12px, 1.1 * var(--board-vw), 16px) * var(--widget-scale)); letter-spacing: .01em; }
 .clock-date > span:first-child::first-letter { text-transform: uppercase; }
-.clock--date .clock-date { font-size: calc(clamp(18px, 3vw, 42px) * var(--widget-scale)); }
+.clock--date .clock-date { font-size: calc(clamp(18px, 3 * var(--board-vw), 42px) * var(--widget-scale)); }
 .date-dot { width: 4px; height: 4px; border-radius: 50%; background: #ddf5ad; }
-.clock time { display: block; margin-left: -.045em; font: 620 calc(clamp(62px, 9.15vw, 176px) * var(--widget-scale))/.99 var(--font-display); letter-spacing: -.084em; font-variant-numeric: tabular-nums; }
+.clock time { display: block; margin-left: -.045em; font: 620 calc(clamp(62px, 9.15 * var(--board-vw), 176px) * var(--widget-scale))/.99 var(--font-display); letter-spacing: -.084em; font-variant-numeric: tabular-nums; }
 
 .weather {
   pointer-events: auto;
   width: 264px;
-  max-width: calc(44vw / var(--widget-scale));
+  max-width: calc(44 * var(--board-vw) / var(--widget-scale));
   max-height: calc(100cqh / var(--widget-scale));
   overflow: auto;
   zoom: var(--widget-scale);
@@ -274,6 +284,7 @@
 .settings-body::-webkit-scrollbar { display: none; }
 .settings-body h2 { font: 740 19px/1.3 var(--font-display); margin-bottom: 15px; }
 .section-stack { @apply grid gap-4; }
+.layout-preference { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid #d5dfce; border-radius: 11px; }
 .widget-settings { min-width: 0; border: 1px solid #d5dfce; border-radius: 11px; }
 .widget-settings-header { display: flex; align-items: center; }
 .widget-settings-toggle {
@@ -345,21 +356,25 @@ input[role="switch"]:checked::after { transform: translateX(15px); }
   .dashboard { --side: 14px; }
   .topbar { padding-top: 14px; }
   .wallpaper-action span { display: none; }
-  .widgets { bottom: 143px; }
-  .clock time { font-size: calc(clamp(32px, 12vw, 90px) * var(--widget-scale)); }
-  .weather { max-width: calc(47vw / var(--widget-scale)); padding: 10px; border-radius: 15px; }
-  .temperature { font-size: 36px; }
   .bottom-bar { bottom: 13px; }
-  .shortcut-widgets { bottom: 69px; --shortcut-max-width: 100cqw; }
-  .canvas { inset: 68px 8px 143px; }
   .notifications { bottom: 145px; }
 }
 
 @media (max-height: 530px) {
   .topbar { padding-top: 12px; padding-bottom: 12px; }
+  .bottom-bar { bottom: 10px; }
+}
+@container board (max-width: 690px) {
+  .widgets { --side: 14px; bottom: 143px; }
+  .clock time { font-size: calc(clamp(32px, 12 * var(--board-vw), 90px) * var(--widget-scale)); }
+  .weather { max-width: calc(47 * var(--board-vw) / var(--widget-scale)); padding: 10px; border-radius: 15px; }
+  .temperature { font-size: 36px; }
+  .shortcut-widgets { bottom: 69px; --shortcut-max-width: 100cqw; }
+  .canvas { inset: 68px 8px 143px; }
+}
+@container board (max-height: 530px) {
   .forecast, .humidity { display: none; }
   .canvas { top: 65px; }
-  .bottom-bar { bottom: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; }

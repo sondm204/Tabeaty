@@ -1,5 +1,6 @@
 import { AlertCircle, LoaderCircle, Image, Move, NotebookPen, Plus, Settings2 } from 'lucide-react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import type { CSSProperties } from 'react'
 import { IconButton } from './components/Controls'
 import { Note } from './components/Notes'
 import { exportBackup, Modal, SettingsPanel } from './components/Settings'
@@ -19,6 +20,11 @@ import { useWorkspaceDirectory } from './services/workspace-directory'
 import type { WorkspaceDirectory } from './services/workspace-directory'
 import { firstWorkspace, readWorkspaceSelection, rememberWorkspace, workspaceSlots } from './workspaces'
 import type { Workspace, WorkspaceSlot } from './workspaces'
+import { fitBoard } from './board-layout'
+
+function viewportSize(): Size {
+  return { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight }
+}
 
 function createBoards() {
   let journal: Storage | undefined
@@ -70,9 +76,17 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
   const [focus, setFocus] = useState('')
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const [area, setArea] = useState<Size>({ width: 0, height: 0 })
+  const [viewport, setViewport] = useState(viewportSize)
   const [guides, setGuides] = useState<SnapGuides>({})
   const [editingWidgets, setEditingWidgets] = useState(false)
   const canvas = useRef<HTMLDivElement>(null)
+  const reference = state.settings.layoutReference
+  const fitted = reference && viewport.width && viewport.height ? fitBoard(reference, viewport) : undefined
+  const scale = fitted?.scale ?? 1
+  const stageStyle = fitted ? {
+    width: fitted.width, height: fitted.height, left: fitted.x, top: fitted.y, right: 'auto', bottom: 'auto',
+    transform: `scale(${scale})`, '--board-vw': `${fitted.width / 100}px`,
+  } as CSSProperties : undefined
 
   useLayoutEffect(() => {
     const element = canvas.current!
@@ -80,6 +94,8 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
       const width = element.clientWidth
       const height = element.clientHeight
       setArea((previous) => previous.width === width && previous.height === height ? previous : { width, height })
+      const next = viewportSize()
+      setViewport((previous) => previous.width === next.width && previous.height === next.height ? previous : next)
     }
     const observer = new ResizeObserver(measure)
     measure()
@@ -122,15 +138,15 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
   const findSnap = useCallback((id: string, rect: Rect, direction?: ResizeDirection) => {
     const origin = canvas.current?.getBoundingClientRect()
     if (!origin) return { rect, guides: {} }
-    const center = viewportCenter(origin)
+    const center = viewportCenter(origin, viewport, scale)
     const neighbors = board.snapshot().notes.filter((note) => note.id !== id).map((note) => noteRect(note, area))
     if (direction) {
-      const snapped = snapResize(rect, area, neighbors, direction, center)
-      return { rect: snapped.rect, guides: viewportGuides(snapped.guides, origin) }
+      const snapped = snapResize(rect, area, neighbors, direction, center, scale)
+      return { rect: snapped.rect, guides: viewportGuides(snapped.guides, origin, scale) }
     }
-    const { position, guides } = snapPosition(rect, rect, area, neighbors, center)
-    return { rect: { ...rect, ...position }, guides: viewportGuides(guides, origin) }
-  }, [area, board])
+    const { position, guides } = snapPosition(rect, rect, area, neighbors, center, scale)
+    return { rect: { ...rect, ...position }, guides: viewportGuides(guides, origin, scale) }
+  }, [area, board, scale, viewport])
 
   const showGuides = useCallback((next: SnapGuides) => {
     setGuides((previous) => previous.x === next.x && previous.y === next.y ? previous : next)
@@ -197,21 +213,23 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
       </div>
     </header>
 
-    <DashboardWidgets settings={state.settings} ready={state.ready} editCity={editWeather} editing={editingWidgets} update={board.updateSettings}
-      setVisibility={board.setWidgetVisibility} showGuides={showGuides} />
+    <div className="board-stage" style={stageStyle}>
+      <DashboardWidgets settings={state.settings} ready={state.ready} editCity={editWeather} editing={editingWidgets} update={board.updateSettings}
+        setVisibility={board.setWidgetVisibility} showGuides={showGuides} />
 
-    <div ref={canvas} className="canvas" role={showNotes ? 'region' : undefined} aria-label={showNotes ? 'Bảng ghi chú' : undefined}>
-      {showNotes && area.width > 0 && area.height > 0 && state.notes.map((note, index) => <Note key={note.id} note={note} area={area} layer={index + 1}
-        focus={focus === note.id} conflict={state.conflicts.includes(noteKey(note.id))} update={board.updateNote}
-        activate={activate} remove={remove} resolve={resolveNote} findSnap={findSnap} showGuides={showGuides} />)}
+      <div ref={canvas} className="canvas" role={showNotes ? 'region' : undefined} aria-label={showNotes ? 'Bảng ghi chú' : undefined}>
+        {showNotes && area.width > 0 && area.height > 0 && state.notes.map((note, index) => <Note key={note.id} note={note} area={area} scale={scale}
+          layer={index + 1} focus={focus === note.id} conflict={state.conflicts.includes(noteKey(note.id))} update={board.updateNote}
+          activate={activate} remove={remove} resolve={resolveNote} findSnap={findSnap} showGuides={showGuides} />)}
+      </div>
+
+      {(widgetVisible(state.settings, 'countdown') || widgetVisible(state.settings, 'pomodoro')) &&
+        <TimerWidgets settings={state.settings} update={board.updateSettings} configure={editTimers} editing={editingWidgets}
+          setVisibility={board.setWidgetVisibility} showGuides={showGuides} />}
+      {state.ready && widgetVisible(state.settings, 'shortcuts') &&
+        <ShortcutWidget shortcuts={state.shortcuts} position={state.settings.shortcutPosition} edit={editShortcuts}
+          editing={editingWidgets} update={board.updateSettings} setVisibility={board.setWidgetVisibility} showGuides={showGuides} />}
     </div>
-
-    {(widgetVisible(state.settings, 'countdown') || widgetVisible(state.settings, 'pomodoro')) &&
-      <TimerWidgets settings={state.settings} update={board.updateSettings} configure={editTimers} editing={editingWidgets}
-        setVisibility={board.setWidgetVisibility} showGuides={showGuides} />}
-    {state.ready && widgetVisible(state.settings, 'shortcuts') &&
-      <ShortcutWidget shortcuts={state.shortcuts} position={state.settings.shortcutPosition} edit={editShortcuts}
-        editing={editingWidgets} update={board.updateSettings} setVisibility={board.setWidgetVisibility} showGuides={showGuides} />}
 
     {(guides.x !== undefined || guides.y !== undefined) && <div className="snap-guides" aria-hidden="true">
       {guides.x !== undefined && <div className="snap-guide snap-guide-x" style={{ left: guides.x }} />}
@@ -236,7 +254,8 @@ function Dashboard({ board, workspace, directory, selectWorkspace }: {
     </footer>}
 
     <SettingsPanel section={section} close={() => selectSettings(null)} select={selectSettings} board={board} state={state} confirm={setConfirmation}
-      widgetTarget={widgetTarget} showConflicts={showConflicts} editWidgetLayout={() => { selectSettings(null); setEditingWidgets(true) }} />
+      viewport={viewport} widgetTarget={widgetTarget} showConflicts={showConflicts}
+      editWidgetLayout={() => { selectSettings(null); setEditingWidgets(true) }} />
     <Modal open={confirmation !== null} close={() => setConfirmation(null)} label={confirmation?.title ?? 'Xác nhận'} className="confirmation-modal">
       {confirmation && <div className="confirmation-inner">
         <h2>{confirmation.title}</h2><p>{confirmation.text}</p>

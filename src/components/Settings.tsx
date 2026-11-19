@@ -5,7 +5,7 @@ import {
   defaultClockAppearance, defaultWeatherAppearance, defaults, MAX_HEIGHT, MAX_SHORTCUTS,
   MAX_WIDTH, MIN_HEIGHT, MIN_WIDTH, widgetVisible,
 } from '../model'
-import type { City, ClockDisplay, Shortcut, WidgetId } from '../model'
+import type { City, ClockDisplay, Shortcut, Size, WidgetId } from '../model'
 import { parseBackup, serializeBackup } from '../services/backup'
 import type { Backup } from '../services/backup'
 import type { Board } from '../services/board'
@@ -200,7 +200,7 @@ function WidgetGroup({ title, target, toggle, children }: {
   </section>
 }
 
-export function SettingsPanel({ section, close, select, board, state, confirm, showConflicts, editWidgetLayout, widgetTarget }: {
+export function SettingsPanel({ section, close, select, board, state, confirm, showConflicts, editWidgetLayout, widgetTarget, viewport }: {
   section: SettingsSection | null
   close: () => void
   select: (section: SettingsSection) => void
@@ -210,6 +210,7 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
   showConflicts: () => void
   editWidgetLayout: () => void
   widgetTarget: WidgetTarget | null
+  viewport: Size
 }) {
   const { settings, shortcuts, notes } = state
   const [fileError, setFileError] = useState('')
@@ -260,6 +261,15 @@ export function SettingsPanel({ section, close, select, board, state, confirm, s
         </div>}
         {section === 'widgets' && <div className="section-stack">
           <button className="secondary-button" type="button" onClick={editWidgetLayout}><Move size={16} /> Kéo thả tiện ích trên bảng</button>
+          <div className="layout-preference">
+            <label className="toggle-field">Giữ tỷ lệ bố cục
+              <input type="checkbox" role="switch" checked={!!settings.layoutReference}
+                onChange={(event) => update({ layoutReference: event.target.checked ? viewport : null })} />
+            </label>
+            <p className="form-hint">{settings.layoutReference
+              ? `Kích thước chuẩn ${settings.layoutReference.width} × ${settings.layoutReference.height}. Ghi chú và widget thu phóng cùng nhau.`
+              : 'Bật trên cửa sổ có bố cục bạn muốn giữ.'}</p>
+          </div>
           <WidgetGroup title="Ngày giờ" toggle={visibility('clock', 'ngày giờ')}>
             <label className="toggle-field">Hiển thị ngày giờ
               <select value={settings.clockDisplay ?? 'date-time'} onChange={(event) => update({ clockDisplay: event.target.value as ClockDisplay })}>

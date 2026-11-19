@@ -106,6 +106,8 @@ export function isSettings(value: unknown): value is Settings {
     && (value.countdownPosition === undefined || isScalablePosition(value.countdownPosition))
     && (value.pomodoroPosition === undefined || isScalablePosition(value.pomodoroPosition))
     && (value.shortcutPosition === undefined || isScalablePosition(value.shortcutPosition))
+    && (value.layoutReference == null || (record(value.layoutReference)
+      && inRange(value.layoutReference.width, 1, 16384) && inRange(value.layoutReference.height, 1, 16384)))
     && (value.fullHeightWidgets === undefined || value.fullHeightWidgets === true)
 }
 

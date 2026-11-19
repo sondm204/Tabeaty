@@ -14,6 +14,7 @@ const RichNote = lazy(() => import('./RichNote'))
 interface NoteProps {
   note: StickyNote
   area: Size
+  scale: number
   layer: number
   focus: boolean
   conflict: boolean
@@ -25,7 +26,7 @@ interface NoteProps {
   showGuides: (guides: SnapGuides) => void
 }
 
-export const Note = memo(function Note({ note, area, layer, focus, conflict, update, activate, remove, resolve, findSnap, showGuides }: NoteProps) {
+export const Note = memo(function Note({ note, area, scale, layer, focus, conflict, update, activate, remove, resolve, findSnap, showGuides }: NoteProps) {
   const [appearance, setAppearance] = useState(false)
   const [focusRich, setFocusRich] = useState(false)
   const [previewRect, setPreviewRect] = useState<Rect>()
@@ -98,6 +99,7 @@ export const Note = memo(function Note({ note, area, layer, focus, conflict, upd
 
   return <Rnd
     className="note"
+    scale={scale}
     // Keep the preview separate from react-rnd's raw drag transform.
     style={{ zIndex: layer, translate: resizing ? undefined : translate }}
     position={{ x: bounds.x, y: bounds.y }}

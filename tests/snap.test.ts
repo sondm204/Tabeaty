@@ -68,6 +68,14 @@ describe('Căn theo tâm trình duyệt', () => {
     expect(snapped.rect).toEqual({ ...raw, width: 380 })
     expect(viewportGuides(snapped.guides, origin)).toEqual({ x: 640, y: undefined })
   })
+
+  it('dùng ngưỡng 8 px màn hình và đặt đường dóng đúng khi bảng được thu nhỏ', () => {
+    const scaled = .5
+    const center = viewportCenter(origin, { width: 600, height: 470 }, scaled)
+    const snapped = snapPosition({ x: 433, y: 239 }, size, frame, [], center, scaled)
+    expect(snapped.position).toEqual({ x: 420, y: 225 })
+    expect(viewportGuides(snapped.guides, origin, scaled)).toEqual({ x: 300, y: 235 })
+  })
 })
 
 describe('Căn chỉnh khi đổi kích thước', () => {
